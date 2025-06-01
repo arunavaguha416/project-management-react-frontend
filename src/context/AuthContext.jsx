@@ -1,0 +1,91 @@
+import React, { useState, useEffect } from 'react';
+import axiosInstance from '../services/axiosinstance';
+import { AuthContext } from './auth-context';
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState({ login: '', register: '', logout: '', profile: '' });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await axiosInstance.get('/profile/');
+        setUser(response.data);
+      } catch (error) {
+        console.error('Fetch user failed:', error);
+        setUser(null);
+        setErrors((prev) => ({ ...prev, profile: error.response?.data?.error || 'Failed to fetch user' }));
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (localStorage.getItem('access')) {
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const login = async (email, password) => {
+    try {
+      const response = await axiosInstance.post('/login/', { email, password });
+      localStorage.setItem('access', response.data.access);
+      localStorage.setItem('refresh', response.data.refresh);
+      setUser(response.data.user);
+      setErrors((prev) => ({ ...prev, login: '' }));
+      return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      setErrors((prev) => ({ ...prev, login: error.response?.data?.error || 'Login failed' }));
+      return false;
+    }
+  };
+
+  const register = async (data) => {
+    try {
+      const response = await axiosInstance.post('/register/', data);
+      localStorage.setItem('access', response.data.access);
+      localStorage.setItem('refresh', response.data.refresh);
+      setUser(response.data.user);
+      setErrors((prev) => ({ ...prev, register: '' }));
+      return true;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      setErrors((prev) => ({ ...prev, register: error.response?.data?.error || 'Registration failed' }));
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await axiosInstance.post('/logout/', { refresh: localStorage.getItem('refresh') });
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      setUser(null);
+      setErrors((prev) => ({ ...prev, logout: '' }));
+    } catch (error) {
+      console.error('Logout failed:', error);
+      setErrors((prev) => ({ ...prev, logout: error.response?.data?.error || 'Logout failed' }));
+    }
+  };
+
+  const updateProfile = async (data) => {
+    try {
+      const response = await axiosInstance.put('/profile/', data);
+      setUser(response.data);
+      setErrors((prev) => ({ ...prev, profile: '' }));
+      return true;
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      setErrors((prev) => ({ ...prev, profile: error.response?.data?.error || 'Profile update failed' }));
+      return false;
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, errors, login, register, logout, updateProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
