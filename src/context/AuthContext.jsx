@@ -7,34 +7,37 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({ login: '', register: '', logout: '', profile: '' });
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await axiosInstance.get('/profile/');
-        setUser(response.data);
-      } catch (error) {
-        console.error('Fetch user failed:', error);
-        setUser(null);
-        setErrors((prev) => ({ ...prev, profile: error.response?.data?.error || 'Failed to fetch user' }));
-      } finally {
-        setLoading(false);
+
+   useEffect(() => {
+    const loadUserFromLocalStorage = () => {
+      const access = localStorage.getItem('access');
+      const refresh = localStorage.getItem('refresh');
+      const storedUser = localStorage.getItem('user'); // Store the full user data if available
+      
+      if (access && refresh && storedUser) {
+        setUser(JSON.parse(storedUser)); // Parse and set user data
+        setLoading(false); // Set loading to false once we know the user is authenticated
+      } else {
+        setLoading(false); // If no user or token, stop loading
       }
     };
-    if (localStorage.getItem('access')) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
+    
+    loadUserFromLocalStorage();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
-      const response = await axiosInstance.post('/login/', { email, password });
-      localStorage.setItem('access', response.data.access);
-      localStorage.setItem('refresh', response.data.refresh);
-      setUser(response.data.user);
-      setErrors((prev) => ({ ...prev, login: '' }));
-      return true;
+      const response = await axiosInstance.post('/authentication/login/', { username, password });
+     
+      if (response.data.status) {
+        localStorage.setItem('access', response.data.access);
+        localStorage.setItem('refresh', response.data.refresh);
+        localStorage.setItem('user', JSON.stringify(response.data.user)); // Store user data
+        setUser(response.data.user);
+        setErrors((prev) => ({ ...prev, login: '' }));
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Login failed:', error);
       setErrors((prev) => ({ ...prev, login: error.response?.data?.error || 'Login failed' }));
@@ -44,12 +47,16 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (data) => {
     try {
-      const response = await axiosInstance.post('/register/', data);
-      localStorage.setItem('access', response.data.access);
-      localStorage.setItem('refresh', response.data.refresh);
-      setUser(response.data.user);
-      setErrors((prev) => ({ ...prev, register: '' }));
-      return true;
+      const response = await axiosInstance.post('/authentication/register/', data);
+      if (response.data.status) {
+        localStorage.setItem('access', response.data.data.access);
+        localStorage.setItem('refresh', response.data.data.refresh);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user)); // Store user data
+        setUser(response.data.data.user);
+        setErrors((prev) => ({ ...prev, register: '' }));
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Registration failed:', error);
       setErrors((prev) => ({ ...prev, register: error.response?.data?.error || 'Registration failed' }));

@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for the login page */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Smooth transitions for inputs */
+input[type="email"],
+input[type="password"] {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Smooth hover effects for links */
+a {
+  transition: color 0.2s ease-in-out;
+}
