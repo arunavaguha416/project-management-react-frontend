@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await axiosInstance.post('/authentication/login/', { username, password });
-     
+      
       if (response.data.status) {
         localStorage.setItem('access', response.data.access);
         localStorage.setItem('refresh', response.data.refresh);

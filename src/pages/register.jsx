@@ -3,213 +3,148 @@ import { AuthContext } from '../context/auth-context';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../services/axiosinstance';
 
-function Register() {
-  const { register, errors } = useContext(AuthContext) || { register: () => {}, errors: {} };
+const Register = () => {
+  const { register } = useContext(AuthContext) || { register: () => {}, errors: {} };
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [username, setUername] = useState('');
+  const [username, setUsername] = useState('');
+  const [salary, setSalary] = useState('');
+  const [designation, setDesignation] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [dob, setDob] = useState('');
+  const [role, setRole] = useState('');
   const [department, setDepartment] = useState('');
   const [company, setCompany] = useState('');
   const [departments, setDepartments] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [dob, setDob] = useState('');
+  const [error, setError] = useState('');
   const [joining, setJoining] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchDepartments = async () => {
+    async function fetchData() {
       setIsLoading(true);
       try {
-        const response = await axiosInstance.post('/department/list/');
-        if (response.data.status) {
-          setDepartments(response.data.records);
-        } else {
-          throw new Error('Failed to fetch departments');
-        }
-      } catch (err) {
-        setError(err.message);
-        console.error('Fetch departments error:', err);
+        const deptRes = await axiosInstance.post('/department/list/');
+        if (deptRes.data.status) setDepartments(deptRes.data.records);
+        const compRes = await axiosInstance.post('/company/list/');
+        if (compRes.data.status) setCompanies(compRes.data.records);
+      } catch {
+        setError('Failed to load company/department info.');
       } finally {
         setIsLoading(false);
       }
-    };
-
-    const fetchCompanies = async () => {
-      setIsLoading(true);
-      try {
-        const response = await axiosInstance.post('/company/list/');
-        if (response.data.status) {
-          setCompanies(response.data.records);
-        } else {
-          throw new Error('Failed to fetch companies');
-        }
-      } catch (err) {
-        setError(err.message);
-        console.error('Fetch companies error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDepartments();
-    fetchCompanies();
+    }
+    fetchData();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    const data = {
-      name,
-      email,
-      password,
+    setError('');
+    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
+    const data = { 
+      name, 
+      email, 
+      username, 
+      password, 
+      date_of_birth: dob, 
       date_of_joining:joining,
-      date_of_birth:dob,
-      dept_id: department,
-      comp_id: company,
+      dept_id: department, 
+      role:role,
+      comp_id: company 
     };
     try {
       const success = await register(data);
-      if (success) {
-        navigate('/dashboard');
-      } else {
-        navigate('/login');
-      }
+      if (success) navigate('/dashboard');
+      else navigate('/login');
     } catch (error) {
-      console.error('Registration error:', error);
       setError(error.message || 'Registration failed');
     }
   };
 
   return (
-    <div className="container">
-      <div className="form-wrapper">
-        <h1 className="heading-primary">Project Management</h1>
-        <h2 className="heading-secondary">Create Your Account</h2>
-        {error && <p className="error">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="input-group">
-            <label htmlFor="name">Full Name</label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your full name"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUername(e.target.value)}
-              placeholder="Enter your username"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label htmlFor="dob">Date of Birth</label>
-            <input
-              id="dob"
-              type="date"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              placeholder="YYYY-MM-DD"
-              required
-              max={new Date().toISOString().split("T")[0]} // Optional: Do not allow future date
-            />
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="dob">Date of Joining</label>
-            <input
-              id="dob"
-              type="date"
-              value={joining}
-              onChange={(e) => setJoining(e.target.value)}
-              placeholder="YYYY-MM-DD"
-              required
-              max={new Date().toISOString().split("T")[0]} // Optional: Do not allow future date
-            />
-          </div>
-          <div className="select-group">
-            <label htmlFor="department">Department</label>
-            <select
-              id="department"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              required
-              disabled={isLoading || error}
+    <div className="container py-5">
+      <div className="card p-4 mx-auto" >
+        <div className="mb-2">
+            <button
+              className="btn btn-outline-primary btn-sm"
+              type="button"
+              style={{marginBottom: ".5em", float: "left"}}
+              onClick={() => navigate(-1)}
             >
+              ← Back
+            </button>
+          </div>
+        <h3>Create New User</h3>
+        {error && <div className="alert alert-danger">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Full Name</label>
+            <input id="name" className="form-control" type="text" value={name} onChange={e => setName(e.target.value)} required />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Email</label>
+            <input id="email" className="form-control" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Username</label>
+            <input id="username" className="form-control" type="text" value={username} onChange={e => setUsername(e.target.value)} required />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Date of Birth</label>
+            <input id="dob" className="form-control" type="date" value={dob} onChange={e => setDob(e.target.value)} required max={new Date().toISOString().split("T")[0]} />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Date of Joining</label>
+            <input id="dob" className="form-control" type="date" value={dob} onChange={e => setJoining(e.target.value)} required max={new Date().toISOString().split("T")[0]} />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Department</label>
+            <select className="form-select" value={department} onChange={e => setDepartment(e.target.value)} required disabled={isLoading || error}>
               <option value="" disabled>Select your department</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))}
+              {departments.map((dept) => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
             </select>
           </div>
-          <div className="select-group">
-            <label htmlFor="company">Company</label>
-            <select
-              id="company"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              required
-              disabled={isLoading || error}
-            >
+          <div className="mb-3">
+            <label className="form-label">Role</label>
+            <select className="form-select" value={role} onChange={e => setRole(e.target.value)} required disabled={isLoading || error}>
+              <option value="" disabled>Select your role</option>
+              <option value="USER" disabled>Employee</option>
+              <option value="HR" disabled>HR</option>
+              <option value="MANAGER" disabled>Manager</option>
+              
+            </select>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Company</label>
+            <select className="form-select" value={company} onChange={e => setCompany(e.target.value)} required disabled={isLoading || error}>
               <option value="" disabled>Select your company</option>
-              {companies.map((comp) => (
-                <option key={comp.id} value={comp.id}>{comp.name}</option>
-              ))}
+              {companies.map((comp) => <option key={comp.id} value={comp.id}>{comp.name}</option>)}
             </select>
           </div>
-          <div className="input-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create a password"
-              required
-            />
+           <div className="mb-3">
+            <label className="form-label">Salary</label>
+            <input id="salary" className="form-control" type="text" value={salary} onChange={e => setSalary(e.target.value)} required />
           </div>
-          <div className="input-group">
-            <label htmlFor="confirm-password">Confirm Password</label>
-            <input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your password"
-              required
-            />
+          <div className="mb-3">
+            <label className="form-label">Designation</label>
+            <input id="designation" className="form-control" type="text" value={designation} onChange={e => setDesignation(e.target.value)} required />
           </div>
-          <button type="submit" className="button" disabled={isLoading}>Add User</button>
-          
+          <div className="mb-3">
+            <label className="form-label">Password</label>
+            <input id="password" className="form-control" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+          </div>
+          <div className="mb-4">
+            <label className="form-label">Confirm Password</label>
+            <input id="confirm-password" className="form-control" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={isLoading}>Save</button>
+         
         </form>
       </div>
     </div>
   );
-}
-
+};
 export default Register;

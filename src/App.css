@@ -1,444 +1,152 @@
-/* jira-theme.css */
-
 :root {
-  --jira-bg: #F4F5F7;
-  --jira-white: #FFFFFF;
-  --jira-border: #DFE1E6;
-  --jira-text: #172B4D;
-  --jira-primary: #0052CC;
+  --jira-primary: #0a3e8d;
   --jira-primary-dark: #0747A6;
-  --jira-danger: #FF5630;
+  --jira-primary-hover: #0747A6;
+  --jira-sidebar: #7e8a9e;
+  --jira-header-text: #172B4D;
+  --jira-bg: #e7edf3;
+  --jira-card: #FFFFFF;
+  --jira-divider: #DFE1E6;
+  --jira-hover: #DEEBFF;
+  --jira-success: #36B37E;
+  --jira-warning: #FFAB00;
+  --jira-error: #FF5630;
+  --jira-text: #172B4D;
+  --jira-muted-text: #42526E;
+  --jira-table-header: #F4F5F7;
+  
 }
 
+/* General Background and Text */
 body {
-  background-color: var(--jira-bg);
+  background: var(--jira-bg);
   color: var(--jira-text);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
 }
 
-.container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1.5rem;
-  background-color: var(--jira-bg);
+/* Jira Nav Sidebar (if present) */
+.jira-sidebar {
+  background: var(--jira-sidebar) !important;
+  color: #fff;
 }
 
-.form-wrapper {
-  background-color: var(--jira-white);
-  padding: 2rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--jira-border);
-  max-width: 80%;
-  width: 100%;
+/* Top Nav/Header */
+.jira-header {
+  background: var(--jira-primary);
+  color: #fff;
 }
 
-.heading-primary {
-  font-size: 1.875rem;
-  font-weight: 800;
-  color: var(--jira-text);
-  text-align: center;
-  margin-bottom: 0.75rem;
+/* Cards and Panels */
+.card, .jira-card {
+  background: var(--jira-card);
+  border: 1px solid var(--jira-divider);
+  border-radius: 0.7em;
+  box-shadow: 0 2px 12px rgba(38,132,255,0.07);
 }
 
-.heading-secondary {
-  font-size: 1.125rem;
-  font-weight: 500;
-  color: var(--jira-text);
-  text-align: center;
-  margin-bottom: 1.5rem;
-}
-
-.input-group label,
-.select-group label {
-  display: block;
-  font-size: 0.875rem;
+.table th, .table-light {
+  background-color: var(--jira-table-header) !important;
+  color: var(--jira-header-text) !important;
+  border-bottom: 2px solid var(--jira-divider);
   font-weight: 600;
-  color: var(--jira-text);
-  margin-bottom: 0.5rem;
 }
 
-input,
-select {
-  width: 100%;
-  padding: 0.625rem 1rem;
-  border: 1px solid var(--jira-border);
-  border-radius: 0.5rem;
-  color: var(--jira-text);
-  font-size: 1rem;
+.table tbody tr {
+  background-color: var(--jira-card);
 }
 
-input:focus,
-select:focus {
-  outline: none;
-  border-color: var(--jira-primary);
-  box-shadow: 0 0 0 1px var(--jira-primary);
-}
-
-.button {
-  display: inline-block;
-  width: 100%;
-  padding: 0.625rem 1rem;
-  background-color: var(--jira-primary);
-  color: var(--jira-white);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-align: center;
-  border: none;
-  border-radius: 0.5rem;
+.clickable-row:hover, .table-hover tbody tr:hover {
+  background: var(--jira-hover) !important;
   cursor: pointer;
+  transition: background 0.1s;
 }
 
-.button:hover {
-  background-color: var(--jira-primary-dark);
+/* Jira Buttons */
+.btn-jira {
+  background: var(--jira-primary) !important;
+  color: #fff !important;
+  border: none !important;
+}
+.btn-jira:hover, .btn-jira:focus {
+  background: var(--jira-primary-hover) !important;
 }
 
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.btn-outline-jira {
+  background: transparent !important;
+  color: var(--jira-primary) !important;
+  border: 2px solid var(--jira-primary) !important;
+}
+.btn-outline-jira:hover {
+  background: var(--jira-primary) !important;
+  color: #fff !important;
 }
 
-.error {
-  color: var(--jira-danger);
-  font-size: 0.875rem;
-  text-align: center;
-  margin-top: 0.5rem;
-}
-
-.text-link {
-  color: var(--jira-primary);
-  font-size: 0.875rem;
-  text-align: center;
-  display: block;
-  margin-top: 1rem;
-}
-
-.text-link:hover {
-  text-decoration: underline;
-}
-
-/* Header */
-.header {
-  background-color: var(--jira-white);
-  padding: 1rem 2rem;
-  border-bottom: 1px solid var(--jira-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header h1 {
-  font-size: 1.5rem;
-  color: var(--jira-text);
-}
-
-.header nav ul {
-  display: flex;
-  gap: 1rem;
-  list-style: none;
-}
-
-.header nav ul li a {
-  text-decoration: none;
-  font-weight: 600;
-  color: var(--jira-text);
-}
-
-.header nav ul li a:hover {
-  color: var(--jira-primary);
-}
-
-/* Footer */
-.footer {
-  background-color: var(--jira-white);
-  border-top: 1px solid var(--jira-border);
-  text-align: center;
-  padding: 1rem;
-  font-size: 0.875rem;
-  color: var(--jira-text);
-  position: relative;
-  bottom: 0;
-  width: 100%;
-}
-
-/* --- HR Dashboard: Userlist (Jira color theme) --- */
-
-/* Make body/container wider and responsive */
-
-
-.userlist-dashboard {
-  max-width: 80%;
-  background: var(--jira-bg, #F4F5F7);
-  color: var(--jira-text, #172B4D);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  margin: 2rem auto;
-  padding: 0;
-  border-radius: 24px;
-}
-
-/* Dashboard title */
-.dashboard-header {
-  font-size: 2.2rem;
-  color: var(--jira-primary, #0052CC);
-  font-weight: 700;
-  text-align: center;
-  background: var(--jira-white, #FFFFFF);
-  padding: 1.2rem 0;
-  margin-bottom: 2.2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(23, 43, 77, 0.03);
-}
-
-/* Layout rows: two elements side by side per row */
-.dashboard-row {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 2.2rem;
-}
-
-/* Make each item occupy half width and same height */
-.flex-item {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: stretch;
-}
-
-.dashboard-section {
-  position: relative;
-  background: var(--jira-white, #FFF);
-  padding: 1.1rem 1.3rem 2rem 1.3rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(23, 43, 77, 0.04);
-  display: flex;
-  flex-direction: column;
-}
-
-h2 {
-  font-size: 1.23rem;
-  color: var(--jira-text, #172B4D);
-  margin-bottom: 1rem;
+/* Jira Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--jira-header-text);
   font-weight: 700;
 }
 
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: transparent;
-  margin-bottom: 0.8rem;
+/* Badges & Status */
+.badge-success, .jira-success {
+  background: var(--jira-success) !important;
+  color: #fff !important;
+}
+.badge-warning, .jira-warning {
+  background: var(--jira-warning) !important;
+  color: #172B4D !important;
+}
+.badge-danger, .jira-error {
+  background: var(--jira-error) !important;
+  color: #fff !important;
 }
 
-th, td {
-  text-align: left;
-  padding: 0.58rem 1rem;
-  border-bottom: 1px solid var(--jira-border, #F4F5F7);
-  font-size: 1rem;
-  background: transparent;
+/* Dividers */
+hr {
+  border-color: var(--jira-divider) !important;
 }
 
-th {
-  background-color: var(--jira-bg, #FAFBFC);
-  color: var(--jira-text, #172B4D);
-  font-weight: 700;
+/* Sidebar Active Link Example */
+.jira-sidebar .nav-link.active {
+  background: var(--jira-primary);
+  color: #fff;
 }
 
-tr:last-child td {
-  border-bottom: none;
+/* Muted Text */
+.text-muted, .jira-muted {
+  color: var(--jira-muted-text) !important;
 }
 
-/* Buttons */
-.primary-btn {
-  background-color: var(--jira-primary, #0052CC);
-  color: var(--jira-white, #FFF);
-  border: none;
-  border-radius: 5px;
-  padding: 0.48rem 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.18s;
-  margin-top: 0.8rem;
-  font-size: 1rem;
-}
-
-.primary-btn:hover, .primary-btn:focus {
-  background-color: #2684FF;
-}
-
-/* Status badges */
-.status {
+/* Optional: Custom scrollbar (matches Jira look on sidebar) */
+::-webkit-scrollbar-thumb {
+  background: #B3BAC5;
   border-radius: 8px;
-  padding: 0.2em 0.8em;
-  font-size: 0.99em;
-  font-weight: 500;
-  display: inline-block;
 }
-.status.ongoing {
-  background: #E3FCEF;
-  color: #36B37E;
-}
-.status.done {
-  background: #DEEBFF;
-  color: var(--jira-primary, #0052CC);
-}
-.status.at-risk {
-  background: #FFEBE6;
-  color: var(--jira-danger, #FF5630);
-}
-
-/* Attendance pie chart (center) */
-.attendance-section svg {
-  display: block;
-  margin: 0 auto;
-  background: none;
-}
-
-.attendance-section {
-  align-items: center;
-  justify-content: center;
-}
-
-/* Responsive styles: stack columns vertically on small screens */
-@media (max-width: 1100px) {
-  .userlist-dashboard,
-  body,
-  .container {
-    max-width: 98vw;
-    padding: 0.5rem;
-  }
-  .dashboard-header {
-    font-size: 1.5rem;
-    padding: 0.8rem 0;
-  }
-}
-
-@media (max-width: 900px) {
-  .dashboard-row {
-    flex-direction: column;
-    gap: 1.2rem;
-  }
-}
-
-/* Fine-tune spacing for smallest screens */
-@media (max-width: 600px) {
-  .userlist-dashboard,
-  body,
-  .container {
-    max-width: 100vw;
-    padding: 0.2rem;
-  }
-  th, td {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.98rem;
-  }
-  .dashboard-section {
-    padding: 0.7rem 0.3rem 1.2rem 0.3rem;
-  }
+::-webkit-scrollbar {
+  background: #F4F5F7;
 }
 
 
-.section-title-sticky {
-  position: sticky;
-  top: 0;
-  background: var(--jira-white, #fff);
-  z-index: 2;
-  margin: 0;
-  padding-top: 1.1rem;
-  padding-bottom: 1rem;
-  border-radius: 12px 12px 0 0;
+html, body, #root {
+  height: 100%;
+  min-height: 100%;
 }
 
-.table-scroll-container {
-  max-height: 200px; /* or any height you want */
-  overflow-y: auto;
-}
-
-
-
-/* Add User Page */
-
-.add-user-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3rem 1rem;
-  background: var(--jira-bg, #F4F5F7);
-  min-height: 98vh;
-}
-
-.add-user-card {
-  width: 100%;
-  max-width: 400px;
-  background: var(--jira-white, #FFF);
-  border-radius: 16px;
-  padding: 2.2rem 2rem 1.5rem 2rem;
-  box-shadow: 0 4px 24px rgba(38, 132, 255, 0.10);
+body, #root {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
 }
 
-.add-user-card h2 {
-  margin-bottom: 1.5rem;
-  color: var(--jira-primary, #0052CC);
-  text-align: center;
+main {
+  flex: 1 0 auto;   /* this lets the main content grow/shrink and push the footer down */
 }
 
-.add-user-card form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.3rem;
+footer {
+  flex-shrink: 0;
 }
 
-.add-user-card label {
-  color: var(--jira-text, #172B4D);
-  font-weight: 600;
-  font-size: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5em;
-}
-
-.add-user-card input {
-  padding: 0.4em 0.7em;
-  border-radius: 5px;
-  border: 1px solid var(--jira-border, #DFE1E6);
-  font-size: 1rem;
-}
-
-.primary-btn {
-  background-color: var(--jira-primary, #0052CC);
-  color: var(--jira-white, #FFF);
-  border: none;
-  border-radius: 5px;
-  padding: 0.60rem 0;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: 1.09em;
-  margin-top: 1.2rem;
-  transition: background 0.2s;
-}
-
-.primary-btn:disabled {
-  filter: brightness(0.95);
-  background: #A5ADBA;
-  cursor: not-allowed;
-}
-.form-error {
-  margin-top: 1rem;
-  color: #FF5630;
-  background: #FFEBE6;
-  padding: 0.7em 1em;
-  border-radius: 7px;
-  font-size: 0.98em;
-}
-.form-success {
-  margin-top: 1rem;
-  color: #36B37E;
-  background: #E3FCEF;
-  padding: 0.7em 1em;
-  border-radius: 7px;
-  font-size: 0.99em;
+.bg-primary {
+    --bs-bg-opacity: 1;
+    background-color: rgb(199 73 171) !important;
 }
