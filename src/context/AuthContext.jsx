@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(response.data.user)); // Store user data
         setUser(response.data.user);
         setErrors((prev) => ({ ...prev, login: '' }));
-        return true;
+        return response.data;
       }
       return false;
     } catch (error) {

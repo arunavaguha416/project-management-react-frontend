@@ -150,3 +150,364 @@ footer {
     --bs-bg-opacity: 1;
     background-color: rgb(199 73 171) !important;
 }
+
+
+/* Add these to your existing App.css file */
+
+/* Dashboard Container Updates */
+.dashboard-container {
+  padding: 24px;
+  background: var(--jira-bg);
+  min-height: 100vh;
+  font-family: 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.dashboard-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--jira-header-text);
+  margin-bottom: 24px;
+  border-bottom: 3px solid var(--jira-primary);
+  padding-bottom: 12px;
+}
+
+/* Enhanced Metrics Cards */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.metric-card {
+  background: var(--jira-card);
+  padding: 24px;
+  border-radius: 0.7em;
+  box-shadow: 0 2px 12px rgba(38,132,255,0.07);
+  border-left: 4px solid var(--jira-primary);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(38,132,255,0.12);
+}
+
+.metric-card h3 {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--jira-primary);
+  margin: 0 0 8px 0;
+}
+
+.metric-card p {
+  color: var(--jira-muted-text);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Dashboard Grid Layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.dashboard-section {
+  background: var(--jira-card);
+  border-radius: 0.7em;
+  box-shadow: 0 2px 12px rgba(38,132,255,0.07);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+  border: 1px solid var(--jira-divider);
+}
+
+.dashboard-section:hover {
+  box-shadow: 0 4px 16px rgba(38,132,255,0.12);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--jira-divider);
+  background: var(--jira-table-header);
+}
+
+.section-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--jira-header-text);
+  margin: 0;
+}
+
+.section-header button {
+  background: var(--jira-primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: background 0.2s ease;
+}
+
+.section-header button:hover {
+  background: var(--jira-primary-hover);
+}
+
+/* Enhanced Table Styles */
+.table-container {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-container th {
+  background: var(--jira-table-header);
+  color: var(--jira-header-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 2px solid var(--jira-divider);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.table-container td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--jira-table-header);
+  color: var(--jira-text);
+  font-size: 14px;
+}
+
+.table-container tr:hover {
+  background: var(--jira-hover);
+}
+
+/* Action Buttons */
+.btn-approve {
+  background: var(--jira-success);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 8px;
+  text-transform: uppercase;
+  transition: background 0.2s ease;
+}
+
+.btn-approve:hover {
+  background: #57d9a3;
+}
+
+.btn-reject {
+  background: var(--jira-error);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background 0.2s ease;
+}
+
+.btn-reject:hover {
+  background: #ff7452;
+}
+
+/* Progress Bar */
+.progress-bar {
+  position: relative;
+  background: var(--jira-table-header);
+  border-radius: 4px;
+  height: 20px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, var(--jira-primary), var(--jira-primary-hover));
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.progress-bar span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Quick Actions Section */
+.quick-actions {
+  grid-column: span 1;
+}
+
+.action-buttons {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.action-buttons button {
+  background: var(--jira-card);
+  border: 2px solid var(--jira-divider);
+  color: var(--jira-muted-text);
+  padding: 16px 12px;
+  border-radius: 0.5em;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.action-buttons button:hover {
+  border-color: var(--jira-primary);
+  color: var(--jira-primary);
+  background: var(--jira-hover);
+  transform: translateY(-2px);
+}
+
+/* Status Badges using your existing color system */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.active,
+.status-badge.ongoing,
+.status-badge.approved {
+  background: #e3fcef;
+  color: var(--jira-success);
+}
+
+.status-badge.pending {
+  background: #fff4e6;
+  color: var(--jira-warning);
+}
+
+.status-badge.rejected,
+.status-badge.completed {
+  background: #ffebe6;
+  color: var(--jira-error);
+}
+
+.status-badge.inactive {
+  background: var(--jira-table-header);
+  color: var(--jira-muted-text);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+  
+  .metrics-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+/* Add to your App.css */
+
+/* App Layout Fix */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1 0 auto;
+  padding-bottom: 2rem; /* Add space before footer */
+}
+
+/* Header Styles */
+header {
+  flex-shrink: 0;
+  background: var(--jira-primary);
+  color: white;
+  padding: 1rem 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Footer Styles */
+footer {
+  flex-shrink: 0;
+  background: var(--jira-card);
+  border-top: 1px solid var(--jira-divider);
+  margin-top: auto;
+}
+
+/* Dashboard Specific Updates */
+.dashboard-container {
+  padding: 24px;
+  background: var(--jira-bg);
+  min-height: calc(100vh - 200px); /* Adjust based on header/footer height */
+  font-family: 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Remove conflicting styles */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--jira-bg);
+  color: var(--jira-text);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}

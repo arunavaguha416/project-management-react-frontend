@@ -5,22 +5,24 @@ import axiosInstance from '../services/axiosinstance';
 
 const Register = () => {
   const { register } = useContext(AuthContext) || { register: () => {}, errors: {} };
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [salary, setSalary] = useState('');
-  const [designation, setDesignation] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [dob, setDob] = useState('');
-  const [role, setRole] = useState('');
-  const [department, setDepartment] = useState('');
-  const [company, setCompany] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    username: '',
+    salary: '',
+    designation: '',
+    password: '',
+    confirmPassword: '',
+    dob: '',
+    role: '',
+    department: '',
+    company: '',
+    joining: ''
+  });
   const [departments, setDepartments] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [joining, setJoining] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,6 +31,7 @@ const Register = () => {
       try {
         const deptRes = await axiosInstance.post('/department/list/');
         if (deptRes.data.status) setDepartments(deptRes.data.records);
+
         const compRes = await axiosInstance.post('/company/list/');
         if (compRes.data.status) setCompanies(compRes.data.records);
       } catch {
@@ -40,111 +43,303 @@ const Register = () => {
     fetchData();
   }, []);
 
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
-    const data = { 
-      name, 
-      email, 
-      username, 
-      password, 
-      date_of_birth: dob, 
-      date_of_joining:joining,
-      dept_id: department, 
-      role:role,
-      comp_id: company 
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    const data = {
+      name: formData.name,
+      email: formData.email,
+      username: formData.username,
+      password: formData.password,
+      date_of_birth: formData.dob,
+      date_of_joining: formData.joining,
+      dept_id: formData.department,
+      role: formData.role,
+      comp_id: formData.company,
+      salary: formData.salary,
+      designation: formData.designation
     };
+
     try {
+      setIsLoading(true);
       const success = await register(data);
-      if (success) navigate('/dashboard');
-      else navigate('/login');
+      if (success) {
+        navigate('/dashboard');
+      } else {
+        navigate('/login');
+      }
     } catch (error) {
       setError(error.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="container py-5">
-      <div className="card p-4 mx-auto" >
-        <div className="mb-2">
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Employee Registration</h1>
+              <p className="text-gray-600 mt-1">Create a new employee account</p>
+            </div>
             <button
-              className="btn btn-outline-primary btn-sm"
-              type="button"
-              style={{marginBottom: ".5em", float: "left"}}
               onClick={() => navigate(-1)}
+              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
             >
-              ← Back
+              Back to Login
             </button>
           </div>
-        <h3>Create New User</h3>
-        {error && <div className="alert alert-danger">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label className="form-label">Full Name</label>
-            <input id="name" className="form-control" type="text" value={name} onChange={e => setName(e.target.value)} required />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Email</label>
-            <input id="email" className="form-control" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Username</label>
-            <input id="username" className="form-control" type="text" value={username} onChange={e => setUsername(e.target.value)} required />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Date of Birth</label>
-            <input id="dob" className="form-control" type="date" value={dob} onChange={e => setDob(e.target.value)} required max={new Date().toISOString().split("T")[0]} />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Date of Joining</label>
-            <input id="dob" className="form-control" type="date" value={dob} onChange={e => setJoining(e.target.value)} required max={new Date().toISOString().split("T")[0]} />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Department</label>
-            <select className="form-select" value={department} onChange={e => setDepartment(e.target.value)} required disabled={isLoading || error}>
-              <option value="" disabled>Select your department</option>
-              {departments.map((dept) => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
-            </select>
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Role</label>
-            <select className="form-select" value={role} onChange={e => setRole(e.target.value)} required disabled={isLoading || error}>
-              <option value="" disabled>Select your role</option>
-              <option value="USER" disabled>Employee</option>
-              <option value="HR" disabled>HR</option>
-              <option value="MANAGER" disabled>Manager</option>
-              
-            </select>
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Company</label>
-            <select className="form-select" value={company} onChange={e => setCompany(e.target.value)} required disabled={isLoading || error}>
-              <option value="" disabled>Select your company</option>
-              {companies.map((comp) => <option key={comp.id} value={comp.id}>{comp.name}</option>)}
-            </select>
-          </div>
-           <div className="mb-3">
-            <label className="form-label">Salary</label>
-            <input id="salary" className="form-control" type="text" value={salary} onChange={e => setSalary(e.target.value)} required />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Designation</label>
-            <input id="designation" className="form-control" type="text" value={designation} onChange={e => setDesignation(e.target.value)} required />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Password</label>
-            <input id="password" className="form-control" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-          </div>
-          <div className="mb-4">
-            <label className="form-label">Confirm Password</label>
-            <input id="confirm-password" className="form-control" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
-          </div>
-          <button className="btn btn-primary" type="submit" disabled={isLoading}>Save</button>
-         
-        </form>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">Employee Details</h2>
+          
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Personal Information */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 mb-4">Personal Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Username *
+                  </label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date of Birth *
+                  </label>
+                  <input
+                    type="date"
+                    name="dob"
+                    value={formData.dob}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date of Joining *
+                  </label>
+                  <input
+                    type="date"
+                    name="joining"
+                    value={formData.joining}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Professional Information */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 mb-4">Professional Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company *
+                  </label>
+                  <select
+                    name="company"
+                    value={formData.company}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Company</option>
+                    {companies.map((comp) => (
+                      <option key={comp.id} value={comp.id}>
+                        {comp.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Department *
+                  </label>
+                  <select
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role *
+                  </label>
+                  <select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Role</option>
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="HR">HR</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Designation
+                  </label>
+                  <input
+                    type="text"
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Salary
+                  </label>
+                  <input
+                    type="number"
+                    name="salary"
+                    value={formData.salary}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Security Information */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 mb-4">Security Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password *
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Password *
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isLoading ? "Registering..." : "Register Employee"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
 };
+
 export default Register;
