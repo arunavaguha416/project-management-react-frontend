@@ -88,10 +88,10 @@ const AddProject = () => {
               <p className="text-gray-600 mt-1">Create a new project and assign it to a manager</p>
             </div>
             <button
-              onClick={() => navigate("/dashboard")}
-              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+              onClick={() => navigate(-1)}
+              className="btn-jira text-white px-4 py-2 rounded-md "
             >
-              Back to Dashboard
+              Back 
             </button>
           </div>
         </div>
@@ -159,7 +159,7 @@ const AddProject = () => {
                   <option value="">Select Manager</option>
                   {managers.map((mgr) => (
                     <option key={mgr.id} value={mgr.id}>
-                      {mgr.name}
+                      {mgr.user.name}
                     </option>
                   ))}
                 </select>
@@ -190,7 +190,7 @@ const AddProject = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="btn-jira text-white px-6 py-2 rounded-md "
               >
                 {isLoading ? "Creating..." : "Create Project"}
               </button>

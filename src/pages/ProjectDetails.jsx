@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/auth-context";
 import axiosInstance from "../services/axiosinstance";
@@ -31,27 +31,21 @@ const ProjectDetails = () => {
     milestones: true
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [id, user.token]);
+  // Move checkAllLoaded to the top and memoize it with useCallback
+  const checkAllLoaded = useCallback(() => {
+    setTimeout(() => {
+      setLoadingStates(current => {
+        const allLoaded = !Object.values(current).some(loading => loading);
+        if (allLoaded) {
+          setIsLoading(false);
+        }
+        return current;
+      });
+    }, 100);
+  }, []); // Empty dependency array since it doesn't depend on any external values
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    
-    // Fetch project details
-    fetchProjectDetails();
-    
-    // Fetch team members
-    fetchTeamMembers();
-    
-    // Fetch tasks
-    fetchTasks();
-    
-    // Fetch milestones
-    fetchMilestones();
-  };
-
-  const fetchProjectDetails = async () => {
+  // Now include checkAllLoaded in the dependency arrays where it's used
+  const fetchProjectDetails = useCallback(async () => {
     try {
       const projectResp = await axiosInstance.get(`/projects/details/${id}/`, {
         headers: { Authorization: `Bearer ${user.token}` }
@@ -65,9 +59,9 @@ const ProjectDetails = () => {
       setLoadingStates(prev => ({ ...prev, projectDetails: false }));
       checkAllLoaded();
     }
-  };
+  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
 
-  const fetchTeamMembers = async () => {
+  const fetchTeamMembers = useCallback(async () => {
     try {
       const teamResp = await axiosInstance.post(`/teams/team-members/`, {
         project_id: id,
@@ -89,9 +83,9 @@ const ProjectDetails = () => {
       setLoadingStates(prev => ({ ...prev, teamMembers: false }));
       checkAllLoaded();
     }
-  };
+  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const tasksResp = await axiosInstance.post(`/projects/tasks/list/`, {
         project_id: id,
@@ -102,7 +96,6 @@ const ProjectDetails = () => {
       const projectTasks = tasksResp.data.records || [];
       setTasks(projectTasks);
       
-      // Calculate task stats
       setStats(prev => ({
         ...prev,
         totalTasks: projectTasks.length,
@@ -118,9 +111,9 @@ const ProjectDetails = () => {
       setLoadingStates(prev => ({ ...prev, tasks: false }));
       checkAllLoaded();
     }
-  };
+  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
 
-  const fetchMilestones = async () => {
+  const fetchMilestones = useCallback(async () => {
     try {
       const milestonesResp = await axiosInstance.post(`/projects/milestones/list/`, {
         project_id: id,
@@ -137,20 +130,25 @@ const ProjectDetails = () => {
       setLoadingStates(prev => ({ ...prev, milestones: false }));
       checkAllLoaded();
     }
-  };
+  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
 
-  const checkAllLoaded = () => {
-    // Check if all API calls are completed
-    setTimeout(() => {
-      setLoadingStates(current => {
-        const allLoaded = !Object.values(current).some(loading => loading);
-        if (allLoaded) {
-          setIsLoading(false);
-        }
-        return current;
-      });
-    }, 100);
-  };
+  // Memoize the main fetchData function
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    
+    // Fetch all data concurrently
+    await Promise.allSettled([
+      fetchProjectDetails(),
+      fetchTeamMembers(),
+      fetchTasks(),
+      fetchMilestones()
+    ]);
+  }, [fetchProjectDetails, fetchTeamMembers, fetchTasks, fetchMilestones]);
+
+  // Now include fetchData in the dependency array
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAddTeamMember = () => {
     navigate(`/project/${id}/add-member`);

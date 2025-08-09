@@ -100,9 +100,9 @@ const Register = () => {
             </div>
             <button
               onClick={() => navigate(-1)}
-              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+              className="btn-jira text-white px-4 py-2 rounded-md "
             >
-              Back to Login
+              Back
             </button>
           </div>
         </div>
@@ -250,7 +250,7 @@ const Register = () => {
                     required
                   >
                     <option value="">Select Role</option>
-                    <option value="EMPLOYEE">Employee</option>
+                    <option value="USER">Employee</option>
                     <option value="MANAGER">Manager</option>
                     <option value="HR">HR</option>
                     <option value="ADMIN">Admin</option>
@@ -330,7 +330,7 @@ const Register = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="btn-jira text-white px-6 py-2 rounded-md "
               >
                 {isLoading ? "Registering..." : "Register Employee"}
               </button>

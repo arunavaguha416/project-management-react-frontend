@@ -22,6 +22,8 @@ const Dashboard = () => {
     pendingLeaves: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
   const [assignModal, setAssignModal] = useState({
     isOpen: false,
     projectId: null,
@@ -44,30 +46,78 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
 
-  // Wrap fetchDashboardData in useCallback to fix the useEffect warning
-  const fetchDashboardData = useCallback(async () => {
+  // Separate function to fetch projects only
+  const fetchProjects = useCallback(async () => {
     try {
-      setIsLoading(true);
-
-      // Fetch projects with pagination
-      const projectRes = await axiosInstance.post("/projects/list/", {
+      setProjectsLoading(true);
+      const response = await axiosInstance.post("/projects/list/", {
         page_size: projectPagination.pageSize,
         page: projectPagination.currentPage,
         search: ""
       });
-      if (projectRes.data.status) {
-        setProjects(projectRes.data.records || []);
+
+      if (response.data.status) {
+        setProjects(response.data.records || []);
         setProjectPagination(prev => ({
           ...prev,
-          totalCount: projectRes.data.count || 0,
-          totalPages: Math.ceil((projectRes.data.count || 0) / prev.pageSize)
+          totalCount: response.data.count || 0,
+          totalPages: response.data.num_pages || 1,
+          currentPage: response.data.current_page || 1
         }));
-        setStats(prev => ({
-          ...prev,
-          totalProjects: projectRes.data.count || 0,
-          activeProjects: projectRes.data.records?.filter(p => p.status === 'Ongoing').length || 0
-        }));
+        
+        // Update stats only if this is the first load (page 1)
+        if (projectPagination.currentPage === 1) {
+          setStats(prev => ({
+            ...prev,
+            totalProjects: response.data.count || 0,
+            activeProjects: response.data.records?.filter(p => p.status === 'Ongoing').length || 0
+          }));
+        }
       }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    } finally {
+      setProjectsLoading(false);
+    }
+  }, [projectPagination.currentPage, projectPagination.pageSize]);
+
+  // Separate function to fetch employees only
+  const fetchEmployees = useCallback(async () => {
+    try {
+      setEmployeesLoading(true);
+      const response = await axiosInstance.post("/hr-management/employees/list/", {
+        page_size: employeePagination.pageSize,
+        page: employeePagination.currentPage
+      });
+
+      if (response.data.status) {
+        setEmployees(response.data.records || []);
+        setEmployeePagination(prev => ({
+          ...prev,
+          totalCount: response.data.count || 0,
+          totalPages: response.data.num_pages || 1,
+          currentPage: response.data.current_page || 1
+        }));
+
+        // Update stats only if this is the first load (page 1)
+        if (employeePagination.currentPage === 1) {
+          setStats(prev => ({
+            ...prev,
+            totalEmployees: response.data.count || 0
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+    } finally {
+      setEmployeesLoading(false);
+    }
+  }, [employeePagination.currentPage, employeePagination.pageSize]);
+
+  // Initial data fetch (non-paginated data)
+  const fetchInitialData = useCallback(async () => {
+    try {
+      setIsLoading(true);
 
       // Fetch managers for assignment dropdown (only for HR)
       if (user.role === 'HR') {
@@ -79,25 +129,7 @@ const Dashboard = () => {
         }
       }
 
-      // Fetch employees with pagination
-      const employeeRes = await axiosInstance.post("/hr-management/employees/list/", {
-        page_size: employeePagination.pageSize,
-        page: employeePagination.currentPage
-      });
-      if (employeeRes.data.status) {
-        setEmployees(employeeRes.data.records || []);
-        setEmployeePagination(prev => ({
-          ...prev,
-          totalCount: employeeRes.data.count || 0,
-          totalPages: Math.ceil((employeeRes.data.count || 0) / prev.pageSize)
-        }));
-        setStats(prev => ({
-          ...prev,
-          totalEmployees: employeeRes.data.count || 0
-        }));
-      }
-
-      // Fetch leave requests with correct endpoint
+      // Fetch leave requests
       const leaveRes = await axiosInstance.post("/hr-management/employees/leave-requests/list/", {
         page_size: 5
       });
@@ -126,16 +158,26 @@ const Dashboard = () => {
       }
 
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error("Error fetching initial data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [projectPagination.currentPage, projectPagination.pageSize, employeePagination.currentPage, employeePagination.pageSize, user.role]);
+  }, [user.role]);
 
-  // Update useEffect to include fetchDashboardData as dependency
+  // Initial load
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchInitialData();
+  }, [fetchInitialData]);
+
+  // Fetch projects when project pagination changes
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  // Fetch employees when employee pagination changes
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
 
   // Pagination handlers
   const handleProjectPageChange = (page) => {
@@ -152,35 +194,33 @@ const Dashboard = () => {
     }));
   };
 
-  // Pagination component - FIXED to use itemName parameter
-  const Pagination = ({ currentPage, totalPages, onPageChange, itemName }) => {
+  // Optimized Pagination component
+  const Pagination = ({ currentPage, totalPages, onPageChange, itemName, totalCount, pageSize, isLoading = false }) => {
     const getPageNumbers = () => {
       const pages = [];
-      const maxVisible = 5;
+      const maxVisible = 3;
       
       if (totalPages <= maxVisible) {
         for (let i = 1; i <= totalPages; i++) {
           pages.push(i);
         }
       } else {
-        if (currentPage <= 3) {
-          for (let i = 1; i <= 4; i++) {
+        if (currentPage <= 2) {
+          for (let i = 1; i <= 3; i++) {
             pages.push(i);
           }
           pages.push('...');
           pages.push(totalPages);
-        } else if (currentPage >= totalPages - 2) {
+        } else if (currentPage >= totalPages - 1) {
           pages.push(1);
           pages.push('...');
-          for (let i = totalPages - 3; i <= totalPages; i++) {
+          for (let i = totalPages - 2; i <= totalPages; i++) {
             pages.push(i);
           }
         } else {
           pages.push(1);
           pages.push('...');
-          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-            pages.push(i);
-          }
+          pages.push(currentPage);
           pages.push('...');
           pages.push(totalPages);
         }
@@ -188,40 +228,31 @@ const Dashboard = () => {
       return pages;
     };
 
-    if (totalPages <= 1) return null;
+    const startItem = (currentPage - 1) * pageSize + 1;
+    const endItem = Math.min(currentPage * pageSize, totalCount);
+
+    if (totalCount === 0) return null;
 
     return (
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
-        <div className="flex justify-between flex-1 sm:hidden">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
-        
-        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">{itemName}</span> page{' '}
-              <span className="font-medium">{currentPage}</span> of{' '}
-              <span className="font-medium">{totalPages}</span>
-            </p>
+      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-700">
+            {isLoading ? (
+              <span className="text-gray-500">Loading...</span>
+            ) : (
+              <>
+                Showing <span className="font-medium">{startItem}</span> to{' '}
+                <span className="font-medium">{endItem}</span> of{' '}
+                <span className="font-medium">{totalCount}</span> {itemName}
+              </>
+            )}
           </div>
-          <div>
+          
+          {totalPages > 1 && (
             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
               <button
                 onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage === 1}
+                disabled={currentPage === 1 || isLoading}
                 className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -238,9 +269,10 @@ const Dashboard = () => {
                   <button
                     key={index}
                     onClick={() => onPageChange(page)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                    disabled={isLoading}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
                       page === currentPage
-                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                         : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
                     }`}
                   >
@@ -251,7 +283,7 @@ const Dashboard = () => {
               
               <button
                 onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || isLoading}
                 className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -259,7 +291,7 @@ const Dashboard = () => {
                 </svg>
               </button>
             </nav>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -288,7 +320,7 @@ const Dashboard = () => {
       if (response.data.status) {
         alert("Project assigned successfully!");
         setAssignModal({ isOpen: false, projectId: null, selectedManager: "" });
-        fetchDashboardData(); // Refresh data
+        fetchProjects(); // Only refresh projects data
       } else {
         alert("Failed to assign project: " + response.data.message);
       }
@@ -342,7 +374,7 @@ const Dashboard = () => {
                     </button>
                     <button
                       onClick={() => navigate("/add-project")}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                      className="btn-jira text-white px-4 py-2 rounded-md "
                     >
                       Add Project
                     </button>
@@ -474,13 +506,13 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Projects List with Pagination and Scrolling */}
+            {/* Projects List with Optimized Pagination */}
             <div className="bg-white rounded-lg shadow-md">
               <div className="p-6 pb-0">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-800">Recent Projects</h2>
                   <button
-                    onClick={() => navigate("/projects")}
+                    onClick={() => navigate("/projects/list")}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                   >
                     View All
@@ -488,98 +520,111 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Scrollable Table Container */}
               <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                <table className="min-w-full table-auto">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Project Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Manager
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      {user.role === 'HR' && (
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Action
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {projects.length > 0 ? (
-                      projects.map((project) => (
-                        <tr 
-                          key={project.id} 
-                          className="hover:bg-gray-50 cursor-pointer"
-                          onClick={() => navigateToProjectDetails(project.id)}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {project.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {project.manager?.name || "Unassigned"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              project.status === "Ongoing"
-                                ? "bg-green-100 text-green-800"
-                                : project.status === "Completed"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}>
-                              {project.status}
-                            </span>
-                          </td>
-                          {user.role === 'HR' && (
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {project.status === "Ongoing" ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAssignProject(project.id);
-                                  }}
-                                  className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-xs"
-                                >
-                                  Assign Manager
-                                </button>
-                              ) : (
-                                <span className="text-gray-400 text-xs">Closed</span>
-                              )}
-                            </td>
-                          )}
-                        </tr>
-                      ))
-                    ) : (
+                {projectsLoading ? (
+                  <div className="text-center p-8">
+                    <div className="inline-flex items-center">
+                      <svg className="animate-spin h-5 w-5 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Loading projects...
+                    </div>
+                  </div>
+                ) : (
+                  <table className="min-w-full table-auto">
+                    <thead className="bg-gray-50 sticky top-0">
                       <tr>
-                        <td colSpan={user.role === 'HR' ? "4" : "3"} className="px-6 py-4 text-center text-gray-500">
-                          No projects found
-                        </td>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Project Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Manager
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        {user.role === 'HR' && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Action
+                          </th>
+                        )}
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {projects.length > 0 ? (
+                        projects.map((project) => (
+                          <tr 
+                            key={project.id} 
+                            className="hover:bg-gray-50 cursor-pointer"
+                            onClick={() => navigateToProjectDetails(project.id)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {project.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {project.manager?.name || "Unassigned"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                project.status === "Ongoing"
+                                  ? "bg-green-100 text-green-800"
+                                  : project.status === "Completed"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}>
+                                {project.status}
+                              </span>
+                            </td>
+                            {user.role === 'HR' && (
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                {project.status === "Ongoing" ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAssignProject(project.id);
+                                    }}
+                                    className="btn-jira text-white px-3 py-1 rounded-md "
+                                  >
+                                    Assign Manager
+                                  </button>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">Closed</span>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={user.role === 'HR' ? "4" : "3"} className="px-6 py-4 text-center text-gray-500">
+                            No projects found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
-              {/* Projects Pagination */}
-              <Pagination
+              <Pagination 
                 currentPage={projectPagination.currentPage}
                 totalPages={projectPagination.totalPages}
                 onPageChange={handleProjectPageChange}
                 itemName="projects"
+                totalCount={projectPagination.totalCount}
+                pageSize={projectPagination.pageSize}
+                isLoading={projectsLoading}
               />
             </div>
 
-            {/* Employees List with Pagination and Scrolling */}
+            {/* Employees List with Optimized Pagination */}
             <div className="bg-white rounded-lg shadow-md">
               <div className="p-6 pb-0">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-800">Recent Employees</h2>
                   <button
-                    onClick={() => navigate("/employees")}
+                    onClick={() => navigate("/employee/list")}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                   >
                     View All
@@ -587,71 +632,84 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Scrollable Table Container */}
               <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                <table className="min-w-full table-auto">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <tr 
-                          key={employee.id} 
-                          className="hover:bg-gray-50 cursor-pointer"
-                          onClick={() => navigateToUserDetails(employee.user?.id || employee.id)}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                                <span className="text-xs font-medium text-gray-700">
-                                  {employee.user?.name?.charAt(0) || employee.name?.charAt(0)}
-                                </span>
-                              </div>
-                              <div className="ml-3">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {employee.user?.name || employee.name}
+                {employeesLoading ? (
+                  <div className="text-center p-8">
+                    <div className="inline-flex items-center">
+                      <svg className="animate-spin h-5 w-5 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Loading employees...
+                    </div>
+                  </div>
+                ) : (
+                  <table className="min-w-full table-auto">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Role
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {employees.length > 0 ? (
+                        employees.map((employee) => (
+                          <tr 
+                            key={employee.id} 
+                            className="hover:bg-gray-50 cursor-pointer"
+                            onClick={() => navigateToUserDetails(employee.user?.id || employee.id)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-medium text-gray-700">
+                                    {employee.user?.name?.charAt(0) || employee.name?.charAt(0)}
+                                  </span>
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {employee.user?.name || employee.name}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {employee.user?.role || employee.role}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                              Active
-                            </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {employee.user?.role || employee.role}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="3" className="px-6 py-4 text-center text-gray-500">
+                            No employees found
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="3" className="px-6 py-4 text-center text-gray-500">
-                          No employees found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
-              {/* Employees Pagination */}
-              <Pagination
+              <Pagination 
                 currentPage={employeePagination.currentPage}
                 totalPages={employeePagination.totalPages}
                 onPageChange={handleEmployeePageChange}
                 itemName="employees"
+                totalCount={employeePagination.totalCount}
+                pageSize={employeePagination.pageSize}
+                isLoading={employeesLoading}
               />
             </div>
           </div>
@@ -769,7 +827,6 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* Empty column if user is not HR/ADMIN to maintain layout */}
             {(user.role !== 'HR' && user.role !== 'ADMIN') && (
               <div></div>
             )}

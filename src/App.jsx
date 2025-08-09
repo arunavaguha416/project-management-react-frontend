@@ -15,6 +15,8 @@ import UserDetails from './pages/UserDetails';
 import ProjectDetails from './pages/ProjectDetails';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
+import ProjectList from './pages/ProjectList';
+import EmployeeList from './pages/EmployeeList';
 
 
 
@@ -47,7 +49,7 @@ export default function App() {
                         <AddProject />
                       </ProtectedRoute>
                     } />
-                    <Route path="/user/details/:id" element={
+                    <Route path="/employee/details/:id" element={
                     <ProtectedRoute allowedRoles={["HR"]}>
                         <UserDetails />
                       </ProtectedRoute>
@@ -57,7 +59,18 @@ export default function App() {
                         <ProjectDetails />
                       </ProtectedRoute>
                     } />
-                    
+                    <Route path="/projects/list" element={
+                    <ProtectedRoute allowedRoles={["HR","MANAGER"]}>
+                        <ProjectList />
+                      </ProtectedRoute>
+                    } />
+
+                    <Route path="/employee/list" element={
+                    <ProtectedRoute allowedRoles={["HR","MANAGER"]}>
+                        <EmployeeList />
+                      </ProtectedRoute>
+                    } />
+
                     <Route
                     path="/employee-dashboard"
                     element={
