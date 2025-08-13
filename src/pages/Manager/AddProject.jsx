@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
-import axiosInstance from "../services/axiosinstance";
-import { AuthContext } from "../context/auth-context";
+import axiosInstance from "../../services/axiosinstance";
+import { AuthContext } from "../../context/auth-context";
 import { useNavigate } from "react-router-dom";
 
 const AddProject = () => {

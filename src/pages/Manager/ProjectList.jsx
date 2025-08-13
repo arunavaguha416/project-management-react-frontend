@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useContext, useCallback } from "react";
-import axiosInstance from "../services/axiosinstance";
-import { AuthContext } from "../context/auth-context";
+import axiosInstance from "../../services/axiosinstance";
+import { AuthContext } from "../../context/auth-context";
 import { useNavigate } from "react-router-dom";
 
-const EmployeeList = () => {
+const ProjectList = () => {
   const { user } = useContext(AuthContext);
-  const [employees, setEmployees] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [paginationLoading, setPaginationLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -20,7 +19,7 @@ const EmployeeList = () => {
   const navigate = useNavigate();
 
   // Optimized fetch function with pagination loading state
-  const fetchEmployees = useCallback(async (isPagination = false) => {
+  const fetchProjects = useCallback(async (isPagination = false) => {
     try {
       if (isPagination) {
         setPaginationLoading(true);
@@ -28,15 +27,14 @@ const EmployeeList = () => {
         setIsLoading(true);
       }
       
-      const response = await axiosInstance.post("/hr-management/employees/list/", {
+      const response = await axiosInstance.post("/projects/list/", {
         page_size: pagination.pageSize,
         page: pagination.currentPage,
-        search: searchQuery,
-        role: roleFilter
+        search: searchQuery
       });
 
       if (response.data.status) {
-        setEmployees(response.data.records || []);
+        setProjects(response.data.records || []);
         setPagination(prev => ({
           ...prev,
           totalCount: response.data.count || 0,
@@ -45,7 +43,7 @@ const EmployeeList = () => {
         }));
       }
     } catch (error) {
-      console.error("Error fetching employees:", error);
+      console.error("Error fetching projects:", error);
     } finally {
       if (isPagination) {
         setPaginationLoading(false);
@@ -53,24 +51,24 @@ const EmployeeList = () => {
         setIsLoading(false);
       }
     }
-  }, [pagination.currentPage, pagination.pageSize, searchQuery, roleFilter]);
+  }, [pagination.currentPage, pagination.pageSize, searchQuery]);
 
   // Initial load
   useEffect(() => {
-    fetchEmployees(false);
-  }, [fetchEmployees]);
+    fetchProjects(false);
+  }, [fetchProjects]);
 
   // Optimized page change handler
   const handlePageChange = (page) => {
     setPagination(prev => ({ ...prev, currentPage: page }));
     // Manually trigger fetch for pagination to avoid useEffect loop
-    setTimeout(() => fetchEmployees(true), 0);
+    setTimeout(() => fetchProjects(true), 0);
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
     setPagination(prev => ({ ...prev, currentPage: 1 }));
-    fetchEmployees(false);
+    fetchProjects(false);
   };
 
   const handleBack = () => {
@@ -126,10 +124,10 @@ const EmployeeList = () => {
               <div className="spinner-border spinner-border-sm me-2" role="status">
                 <span className="visually-hidden">Loading...</span>
               </div>
-              Loading employees...
+              Loading projects...
             </div>
           ) : (
-            <>Showing {startItem} to {endItem} of {totalCount} employees</>
+            <>Showing {startItem} to {endItem} of {totalCount} projects</>
           )}
         </div>
         {totalPages > 1 ? (
@@ -179,24 +177,18 @@ const EmployeeList = () => {
     );
   };
 
-  const getInitials = (name) => {
-    return name ? name.charAt(0).toUpperCase() : '?';
-  };
-
   return (
     <div className="dashboard-container">
       {/* Header with Back Button on Right */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="dashboard-title">Employee Management</h1>
+        <h1 className="dashboard-title">Project Management</h1>
         <div className="d-flex gap-2">
-          {user.role === 'HR' && (
-            <button 
-              className="btn btn-jira"
-              onClick={() => navigate('/employees/create')}
-            >
-              Add Employee
-            </button>
-          )}
+          <button 
+            className="btn btn-jira"
+            onClick={() => navigate('/projects/create')}
+          >
+            Create Project
+          </button>
           <button 
             className="btn btn-outline-secondary"
             onClick={handleBack}
@@ -214,28 +206,16 @@ const EmployeeList = () => {
         </div>
         <div className="p-4">
           <form onSubmit={handleSearch} className="row g-3">
-            <div className="col-md-6">
+            <div className="col-md-8">
               <input
                 type="text"
                 className="form-control"
-                placeholder="Search employees..."
+                placeholder="Search projects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="col-md-3">
-              <select
-                className="form-select"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              >
-                <option value="">All Roles</option>
-                <option value="HR">HR</option>
-                <option value="MANAGER">Manager</option>
-                <option value="USER">Employee</option>
-              </select>
-            </div>
-            <div className="col-md-3">
+            <div className="col-md-4">
               <button type="submit" className="btn btn-jira w-100">
                 Search
               </button>
@@ -244,30 +224,10 @@ const EmployeeList = () => {
         </div>
       </div>
 
-      {/* Employee Statistics */}
-      <div className="metrics-row mb-4">
-        <div className="metric-card">
-          <h3>{pagination.totalCount}</h3>
-          <p>Total Employees</p>
-        </div>
-        <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === 'HR').length}</h3>
-          <p>HR Staff</p>
-        </div>
-        <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === 'MANAGER').length}</h3>
-          <p>Managers</p>
-        </div>
-        <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === 'USER').length}</h3>
-          <p>Employees</p>
-        </div>
-      </div>
-
-      {/* Employees Table */}
+      {/* Projects Table */}
       <div className="dashboard-section">
         <div className="section-header">
-          <h2>All Employees</h2>
+          <h2>All Projects</h2>
           <span className="badge bg-primary">{pagination.totalCount} Total</span>
         </div>
         <div className="table-container">
@@ -282,62 +242,48 @@ const EmployeeList = () => {
               <table className="table table-hover mb-0">
                 <thead>
                   <tr>
-                    <th>Employee</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Designation</th>
-                    <th>Salary</th>
-                    <th>Date of Joining</th>
-                    <th>Date of Birth</th>
+                    <th>Project Name</th>
+                    <th>Description</th>
+                    <th>Manager</th>
                     <th>Status</th>
+                    <th>Created Date</th>
+                    <th>Updated Date</th>
                     {user.role === 'HR' && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody style={{ opacity: paginationLoading ? 0.6 : 1 }}>
-                  {employees.length > 0 ? (
-                    employees.map((employee) => (
-                      <tr key={employee.id}>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <div className="avatar-circle me-3">
-                              {getInitials(employee.user?.name || employee.name)}
-                            </div>
-                            <div>
-                              <div className="fw-bold">
-                                {employee.user?.name || employee.name}
-                              </div>
-                              <small className="text-muted">
-                                @{employee.user?.username || employee.username}
-                              </small>
-                            </div>
-                          </div>
+                  {projects.length > 0 ? (
+                    projects.map((project) => (
+                      <tr key={project.id}>
+                        <td className="fw-bold">{project.name}</td>
+                        <td className="text-truncate" style={{maxWidth: '200px'}}>
+                          {project.description}
                         </td>
-                        <td>{employee.user?.email || employee.email}</td>
                         <td>
-                          <span className={`status-badge ${(employee.user?.role || employee.role).toLowerCase()}`}>
-                            {employee.user?.role || employee.role}
+                          {project.manager?.name || (
+                            <span className="text-muted">Unassigned</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`status-badge ${project.status.toLowerCase()}`}>
+                            {project.status}
                           </span>
                         </td>
-                        <td>{employee.designation}</td>
-                        <td>₹{employee.salary}</td>
-                        <td>{new Date(employee.date_of_joining).toLocaleDateString()}</td>
-                        <td>{new Date(employee.user?.date_of_birth).toLocaleDateString()}</td>
-                        <td>
-                          <span className="status-badge active">Active</span>
-                        </td>
+                        <td>{new Date(project.created_at).toLocaleDateString()}</td>
+                        <td>{new Date(project.updated_at).toLocaleDateString()}</td>
                         {user.role === 'HR' && (
                           <td>
                             <button 
                               className="btn btn-sm btn-outline-jira me-2"
-                              onClick={() => navigate(`/employees/edit/${employee.id}`)}
+                              onClick={() => navigate(`/projects/edit/${project.id}`)}
                             >
                               Edit
                             </button>
                             <button 
-                              className="btn btn-sm btn-outline-primary"
-                              onClick={() => navigate(`/employees/view/${employee.id}`)}
+                              className="btn btn-sm btn-approve"
+                              onClick={() => navigate(`/projects/manage/${project.id}`)}
                             >
-                              View
+                              Manage
                             </button>
                           </td>
                         )}
@@ -345,8 +291,8 @@ const EmployeeList = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={user.role === 'HR' ? 9 : 8} className="text-center text-muted py-4">
-                        No employees found
+                      <td colSpan={user.role === 'HR' ? 7 : 6} className="text-center text-muted py-4">
+                        No projects found
                       </td>
                     </tr>
                   )}
@@ -368,4 +314,4 @@ const EmployeeList = () => {
   );
 };
 
-export default EmployeeList;
+export default ProjectList;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/auth-context";
-import axiosInstance from "../services/axiosinstance";
+import { AuthContext } from "../../context/auth-context";
+import axiosInstance from "../../services/axiosinstance";
 
 const ProjectDetails = () => {
   const { id } = useParams();

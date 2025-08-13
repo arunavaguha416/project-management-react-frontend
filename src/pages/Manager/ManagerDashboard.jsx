@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { AuthContext } from '../context/auth-context';
-import axiosInstance from '../services/axiosinstance';
+import { AuthContext } from '../../context/auth-context';
+import axiosInstance from '../../services/axiosinstance';
 import { useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 5;
