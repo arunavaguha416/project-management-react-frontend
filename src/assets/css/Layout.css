@@ -4,11 +4,9 @@
   min-height: 100vh;
   background: #f7fafc;
   position: relative;
-  margin: 0;
-  padding: 0;
 }
 
-/* Main Content Area */
+/* Main Content Area - Remove gap */
 .main-content {
   flex: 1;
   display: flex;
@@ -16,34 +14,32 @@
   min-height: 100vh;
   transition: margin-left 0.3s ease;
   overflow: hidden;
-  margin: 0;
-  padding: 0;
+  margin-left: 0; /* Remove default margin */
 }
 
-/* Desktop: Account for sidebar width - Remove gap */
+/* Desktop: Account for sidebar width without gap */
 @media (min-width: 1024px) {
   .main-content {
-    margin-left: 320px;
+    margin-left: 320px; /* Exact sidebar width */
   }
 }
 
-/* Content Area */
+/* Content Area - Remove extra padding */
 .content-area {
   flex: 1;
-  padding: 0; /* Remove all padding initially */
+  padding: 0; /* Remove padding to eliminate gap */
   background: #f7fafc;
   overflow-y: auto;
   overflow-x: hidden;
   max-height: calc(100vh - 80px);
 }
 
-/* Dashboard Container - Add padding here instead */
+/* Add padding only to dashboard container */
 .dashboard-container {
   max-width: 1200px;
   margin: 0;
   background: transparent;
-  padding: 32px; /* Move padding to dashboard container */
-  min-height: auto;
+  padding: 32px; /* Move padding here */
 }
 
 /* Mobile Content Adjustments */
@@ -51,123 +47,8 @@
   .dashboard-container {
     padding: 20px 16px;
   }
-}
-
-/* Ensure no gaps */
-* {
-  box-sizing: border-box;
-}
-
-.dashboard-title {
-  color: #2d3748;
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 32px;
-  text-align: left;
-}
-
-.metrics-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-  margin-bottom: 40px;
-}
-
-.metric-card {
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e2e8f0;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.metric-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-}
-
-.metric-card h3 {
-  font-size: 36px;
-  font-weight: 700;
-  color: #4299e1;
-  margin: 0 0 8px 0;
-}
-
-.metric-card p {
-  font-size: 14px;
-  color: #718096;
-  margin: 0;
-  font-weight: 500;
-}
-
-/* Dashboard Grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 24px;
-  margin-bottom: 40px;
-}
-
-.dashboard-section {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-}
-
-.section-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f8fafc;
-}
-
-.section-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.table-container {
-  overflow-x: auto;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-/* Scrollbar Styling */
-.content-area::-webkit-scrollbar {
-  width: 8px;
-}
-
-.content-area::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.content-area::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.content-area::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-.table-container::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.table-container::-webkit-scrollbar-track {
-  background: #f7fafc;
-}
-
-.table-container::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
-  border-radius: 3px;
+  
+  .content-area {
+    max-height: calc(100vh - 80px);
+  }
 }

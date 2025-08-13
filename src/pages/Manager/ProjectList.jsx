@@ -27,7 +27,7 @@ const ProjectList = () => {
         setIsLoading(true);
       }
       
-      const response = await axiosInstance.post("/projects/list/", {
+      const response = await axiosInstance.post("/projects/manager/list/", {
         page_size: pagination.pageSize,
         page: pagination.currentPage,
         search: searchQuery
@@ -185,7 +185,7 @@ const ProjectList = () => {
         <div className="d-flex gap-2">
           <button 
             className="btn btn-jira"
-            onClick={() => navigate('/projects/create')}
+            onClick={() => navigate('/add-project')}
           >
             Create Project
           </button>

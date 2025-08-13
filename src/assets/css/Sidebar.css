@@ -1,4 +1,4 @@
-/* Sidebar Container */
+/* Sidebar Container - Ensure no gap */
 .sidebar {
   position: fixed;
   top: 0;
@@ -12,18 +12,29 @@
   flex-direction: column;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-  border-right: 1px solid #2d3748;
+  border-right: none; /* Remove border that might create gap */
+  overflow: hidden;
 }
 
 .sidebar.sidebar-open {
   left: 0;
 }
 
-/* Sidebar Header */
+/* Desktop - Always visible sidebar */
+@media (min-width: 1024px) {
+  .sidebar {
+    left: 0;
+    position: fixed;
+    box-shadow: none; /* Remove shadow on desktop */
+  }
+}
+
+/* Rest of sidebar styles remain the same... */
 .sidebar-header {
   padding: 24px 20px;
   border-bottom: 1px solid #2d3748;
   background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
+  flex-shrink: 0;
 }
 
 .sidebar-brand {
@@ -62,7 +73,6 @@
   margin-top: 2px;
 }
 
-/* User Profile Section */
 .sidebar-user {
   padding: 24px 20px;
   display: flex;
@@ -70,6 +80,7 @@
   gap: 16px;
   border-bottom: 1px solid #2d3748;
   background: rgba(45, 55, 72, 0.5);
+  flex-shrink: 0;
 }
 
 .user-avatar {
@@ -126,11 +137,11 @@
   100% { box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
 }
 
-/* Navigation */
 .sidebar-nav {
   flex: 1;
   padding: 24px 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .nav-section {
@@ -165,20 +176,19 @@
   text-decoration: none;
   transition: all 0.2s ease;
   position: relative;
-  border-radius: 0 25px 25px 0;
-  margin-right: 20px;
+  border-radius: 0;
+  margin-right: 0;
 }
 
 .nav-link:hover {
   background: rgba(66, 153, 225, 0.1);
   color: #ffffff;
-  transform: translateX(4px);
 }
 
 .nav-link.active {
   background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+  box-shadow: inset 4px 0 0 #ffffff;
 }
 
 .nav-icon {
@@ -205,10 +215,10 @@
   opacity: 1;
 }
 
-/* Sidebar Footer */
 .sidebar-footer {
   padding: 20px;
   border-top: 1px solid #2d3748;
+  flex-shrink: 0;
 }
 
 .logout-btn {
@@ -234,7 +244,23 @@
   box-shadow: 0 4px 12px rgba(245, 101, 101, 0.2);
 }
 
-/* Toggle Button */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: rgba(45, 55, 72, 0.5);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(66, 153, 225, 0.3);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(66, 153, 225, 0.5);
+}
+
 .sidebar-toggle {
   position: fixed;
   top: 20px;
@@ -258,7 +284,12 @@
   box-shadow: 0 8px 25px rgba(66, 153, 225, 0.5);
 }
 
-/* Hamburger Icon */
+@media (min-width: 1024px) {
+  .sidebar-toggle {
+    display: none;
+  }
+}
+
 .hamburger {
   width: 24px;
   height: 18px;
@@ -308,7 +339,6 @@
   transform: rotate(-135deg);
 }
 
-/* Sidebar Overlay */
 .sidebar-overlay {
   position: fixed;
   top: 0;
@@ -318,44 +348,4 @@
   background: rgba(0, 0, 0, 0.6);
   z-index: 999;
   backdrop-filter: blur(2px);
-}
-
-/* Main Content Adjustment */
-.main-content {
-  transition: margin-left 0.3s ease;
-}
-
-/* Scrollbar Styling */
-.sidebar-nav::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-nav::-webkit-scrollbar-track {
-  background: rgba(45, 55, 72, 0.5);
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(66, 153, 225, 0.3);
-  border-radius: 3px;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(66, 153, 225, 0.5);
-}
-
-/* Responsive Design */
-@media (min-width: 1024px) {
-  .sidebar-toggle {
-    display: none;
-  }
-  
-  .sidebar {
-    left: 0;
-    position: relative;
-    box-shadow: none;
-  }
-  
-  .main-content {
-    margin-left: 0;
-  }
 }

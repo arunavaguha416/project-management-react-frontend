@@ -185,7 +185,7 @@ const ProjectList = () => {
         <div className="d-flex gap-2">
           <button 
             className="btn btn-jira"
-            onClick={() => navigate('/projects/create')}
+            onClick={() => navigate('/add-project')}
           >
             Create Project
           </button>
