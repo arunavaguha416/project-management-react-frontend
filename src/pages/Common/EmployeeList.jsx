@@ -20,54 +20,58 @@ const EmployeeList = () => {
   const navigate = useNavigate();
 
   // Optimized fetch function with pagination loading state
-  const fetchEmployees = useCallback(async (isPagination = false) => {
-    try {
-      if (isPagination) {
-        setPaginationLoading(true);
-      } else {
-        setIsLoading(true);
-      }
-      
-      const response = await axiosInstance.post("/hr-management/employees/list/", {
-        page_size: pagination.pageSize,
-        page: pagination.currentPage,
-        search: searchQuery,
-        role: roleFilter
-      });
+  const fetchEmployees = useCallback(
+    async (isPagination = false) => {
+      try {
+        if (isPagination) {
+          setPaginationLoading(true);
+        } else {
+          setIsLoading(true);
+        }
 
-      if (response.data.status) {
-        setEmployees(response.data.records || []);
-        setPagination(prev => ({
-          ...prev,
-          totalCount: response.data.count || 0,
-          totalPages: response.data.num_pages || 1,
-          currentPage: response.data.current_page || 1
-        }));
+        const response = await axiosInstance.post(
+          "/hr-management/employees/list/",
+          {
+            page_size: pagination.pageSize,
+            page: pagination.currentPage,
+            search: searchQuery,
+            role: roleFilter
+          }
+        );
+
+        if (response.data.status) {
+          setEmployees(response.data.records || []);
+          setPagination(prev => ({
+            ...prev,
+            totalCount: response.data.count || 0,
+            totalPages: response.data.num_pages || 1,
+            currentPage: response.data.current_page || 1
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+      } finally {
+        if (isPagination) {
+          setPaginationLoading(false);
+        } else {
+          setIsLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-    } finally {
-      if (isPagination) {
-        setPaginationLoading(false);
-      } else {
-        setIsLoading(false);
-      }
-    }
-  }, [pagination.currentPage, pagination.pageSize, searchQuery, roleFilter]);
+    },
+    [pagination.currentPage, pagination.pageSize, searchQuery, roleFilter]
+  );
 
   // Initial load
   useEffect(() => {
     fetchEmployees(false);
   }, [fetchEmployees]);
 
-  // Optimized page change handler
-  const handlePageChange = (page) => {
+  const handlePageChange = page => {
     setPagination(prev => ({ ...prev, currentPage: page }));
-    // Manually trigger fetch for pagination to avoid useEffect loop
     setTimeout(() => fetchEmployees(true), 0);
   };
 
-  const handleSearch = (e) => {
+  const handleSearch = e => {
     e.preventDefault();
     setPagination(prev => ({ ...prev, currentPage: 1 }));
     fetchEmployees(false);
@@ -77,12 +81,18 @@ const EmployeeList = () => {
     navigate(-1);
   };
 
-  // Optimized Pagination component with loading states
-  const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, pageSize, isLoading = false }) => {
+  const Pagination = ({
+    currentPage,
+    totalPages,
+    onPageChange,
+    totalCount,
+    pageSize,
+    isLoading = false
+  }) => {
     const getPageNumbers = () => {
       const pages = [];
       const maxVisible = 5;
-      
+
       if (totalPages <= maxVisible) {
         for (let i = 1; i <= totalPages; i++) {
           pages.push(i);
@@ -92,21 +102,21 @@ const EmployeeList = () => {
           for (let i = 1; i <= 4; i++) {
             pages.push(i);
           }
-          pages.push('...');
+          pages.push("...");
           pages.push(totalPages);
         } else if (currentPage >= totalPages - 2) {
           pages.push(1);
-          pages.push('...');
+          pages.push("...");
           for (let i = totalPages - 3; i <= totalPages; i++) {
             pages.push(i);
           }
         } else {
           pages.push(1);
-          pages.push('...');
+          pages.push("...");
           for (let i = currentPage - 1; i <= currentPage + 1; i++) {
             pages.push(i);
           }
-          pages.push('...');
+          pages.push("...");
           pages.push(totalPages);
         }
       }
@@ -123,7 +133,10 @@ const EmployeeList = () => {
         <div className="text-muted small">
           {isLoading ? (
             <div className="d-flex align-items-center">
-              <div className="spinner-border spinner-border-sm me-2" role="status">
+              <div
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+              >
                 <span className="visually-hidden">Loading...</span>
               </div>
               Loading employees...
@@ -135,7 +148,9 @@ const EmployeeList = () => {
         {totalPages > 1 ? (
           <nav>
             <ul className="pagination pagination-sm mb-0">
-              <li className={`page-item ${currentPage === 1 || isLoading ? 'disabled' : ''}`}>
+              <li
+                className={`page-item ${currentPage === 1 || isLoading ? "disabled" : ""}`}
+              >
                 <button
                   className="page-link"
                   onClick={() => onPageChange(currentPage - 1)}
@@ -145,8 +160,11 @@ const EmployeeList = () => {
                 </button>
               </li>
               {getPageNumbers().map((page, index) => (
-                <li key={index} className={`page-item ${page === currentPage ? 'active' : ''} ${isLoading ? 'disabled' : ''}`}>
-                  {page === '...' ? (
+                <li
+                  key={index}
+                  className={`page-item ${page === currentPage ? "active" : ""} ${isLoading ? "disabled" : ""}`}
+                >
+                  {page === "..." ? (
                     <span className="page-link">...</span>
                   ) : (
                     <button
@@ -159,7 +177,9 @@ const EmployeeList = () => {
                   )}
                 </li>
               ))}
-              <li className={`page-item ${currentPage === totalPages || isLoading ? 'disabled' : ''}`}>
+              <li
+                className={`page-item ${currentPage === totalPages || isLoading ? "disabled" : ""}`}
+              >
                 <button
                   className="page-link"
                   onClick={() => onPageChange(currentPage + 1)}
@@ -171,43 +191,41 @@ const EmployeeList = () => {
             </ul>
           </nav>
         ) : (
-          <div className="text-muted small">
-            Page 1 of 1
-          </div>
+          <div className="text-muted small">Page 1 of 1</div>
         )}
       </div>
     );
   };
 
-  const getInitials = (name) => {
-    return name ? name.charAt(0).toUpperCase() : '?';
+  const getInitials = name => {
+    return name ? name.charAt(0).toUpperCase() : "?";
   };
 
   return (
     <div className="dashboard-container">
-      {/* Header with Back Button on Right */}
+      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="dashboard-title">Employee Management</h1>
         <div className="d-flex gap-2">
-          {user.role === 'HR' && (
-            <button 
+          {user.role === "HR" && (
+            <button
               className="btn btn-jira"
-              onClick={() => navigate('/employees/create')}
+              onClick={() => navigate("/employees/create")}
             >
               Add Employee
             </button>
           )}
-          <button 
+          <button
             className="btn btn-outline-secondary"
             onClick={handleBack}
           >
-            <i className="fas fa-arrow-left me-2"></i>
+            <i className="fas fa-arrow-left me-2" />
             Back
           </button>
         </div>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search & Filters */}
       <div className="dashboard-section mb-4">
         <div className="section-header">
           <h2>Search & Filter</h2>
@@ -220,14 +238,14 @@ const EmployeeList = () => {
                 className="form-control"
                 placeholder="Search employees..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="col-md-3">
               <select
                 className="form-select"
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
+                onChange={e => setRoleFilter(e.target.value)}
               >
                 <option value="">All Roles</option>
                 <option value="HR">HR</option>
@@ -244,27 +262,27 @@ const EmployeeList = () => {
         </div>
       </div>
 
-      {/* Employee Statistics */}
+      {/* Stats */}
       <div className="metrics-row mb-4">
         <div className="metric-card">
           <h3>{pagination.totalCount}</h3>
           <p>Total Employees</p>
         </div>
         <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === 'HR').length}</h3>
+          <h3>{employees.filter(emp => emp.user?.role === "HR").length}</h3>
           <p>HR Staff</p>
         </div>
         <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === 'MANAGER').length}</h3>
+          <h3>{employees.filter(emp => emp.user?.role === "MANAGER").length}</h3>
           <p>Managers</p>
         </div>
         <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === 'USER').length}</h3>
+          <h3>{employees.filter(emp => emp.user?.role === "USER").length}</h3>
           <p>Employees</p>
         </div>
       </div>
 
-      {/* Employees Table */}
+      {/* Table */}
       <div className="dashboard-section">
         <div className="section-header">
           <h2>All Employees</h2>
@@ -284,18 +302,18 @@ const EmployeeList = () => {
                   <tr>
                     <th>Employee</th>
                     <th>Email</th>
-                    <th>Role</th>
+                    {user.role === "HR" && <th>Role</th>}
                     <th>Designation</th>
-                    <th>Salary</th>
-                    <th>Date of Joining</th>
-                    <th>Date of Birth</th>
+                    {user.role === "HR" && <th>Salary</th>}
+                    {user.role === "HR" && <th>Date of Joining</th>}
+                    {user.role === "HR" && <th>Date of Birth</th>}
                     <th>Status</th>
-                    {user.role === 'HR' && <th>Actions</th>}
+                    {user.role === "HR" && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody style={{ opacity: paginationLoading ? 0.6 : 1 }}>
                   {employees.length > 0 ? (
-                    employees.map((employee) => (
+                    employees.map(employee => (
                       <tr key={employee.id}>
                         <td>
                           <div className="d-flex align-items-center">
@@ -313,27 +331,39 @@ const EmployeeList = () => {
                           </div>
                         </td>
                         <td>{employee.user?.email || employee.email}</td>
-                        <td>
-                          <span className={`status-badge ${(employee.user?.role || employee.role).toLowerCase()}`}>
-                            {employee.user?.role || employee.role}
-                          </span>
-                        </td>
+                        {user.role === "HR" && (
+                          <td>
+                            <span
+                              className={`status-badge ${(employee.user?.role || employee.role).toLowerCase()}`}
+                            >
+                              {employee.user?.role || employee.role}
+                            </span>
+                          </td>
+                        )}
                         <td>{employee.designation}</td>
-                        <td>₹{employee.salary}</td>
-                        <td>{new Date(employee.date_of_joining).toLocaleDateString()}</td>
-                        <td>{new Date(employee.user?.date_of_birth).toLocaleDateString()}</td>
+                        {user.role === "HR" && <td>₹{employee.salary}</td>}
+                        {user.role === "HR" && (
+                          <td>
+                            {new Date(employee.date_of_joining).toLocaleDateString()}
+                          </td>
+                        )}
+                        {user.role === "HR" && (
+                          <td>
+                            {new Date(employee.user?.date_of_birth).toLocaleDateString()}
+                          </td>
+                        )}
                         <td>
                           <span className="status-badge active">Active</span>
                         </td>
-                        {user.role === 'HR' && (
+                        {user.role === "HR" && (
                           <td>
-                            <button 
+                            <button
                               className="btn btn-sm btn-outline-jira me-2"
                               onClick={() => navigate(`/employees/edit/${employee.id}`)}
                             >
                               Edit
                             </button>
-                            <button 
+                            <button
                               className="btn btn-sm btn-outline-primary"
                               onClick={() => navigate(`/employees/view/${employee.id}`)}
                             >
@@ -345,7 +375,10 @@ const EmployeeList = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={user.role === 'HR' ? 9 : 8} className="text-center text-muted py-4">
+                      <td
+                        colSpan={user.role === "HR" ? 9 : 4}
+                        className="text-center text-muted py-4"
+                      >
                         No employees found
                       </td>
                     </tr>
