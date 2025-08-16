@@ -49,7 +49,7 @@ const ManagerDashboard = () => {
     setTeamLoading(true);
     try {
       const res = await axiosInstance.post(
-        '/projects/manager/team-members/',
+        'teams/members/',
         { page: 1, page_size: PAGE_SIZE },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

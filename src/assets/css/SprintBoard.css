@@ -1,0 +1,9 @@
+.tab-btn {
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+
+.board-columns {
+  display: grid;
+  gap: 12px;
+}

@@ -16,6 +16,7 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import ManagerDashboard from './pages/Manager/ManagerDashboard';
 import ProjectList from './pages/Manager/ProjectList';
 import EmployeeList from './pages/Common/EmployeeList';
+import SprintBoard from './pages/Sprint/SprintBoard';
 
 export default function App() {
   return (
@@ -133,6 +134,18 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
+             <Route
+              path="/sprint-board/:projectId"
+              element={
+                <ProtectedRoute allowedRoles={["MANAGER"]}>
+                  <Layout>
+                    <SprintBoard />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
           </Routes>
         </ErrorBoundary>
       </Router>

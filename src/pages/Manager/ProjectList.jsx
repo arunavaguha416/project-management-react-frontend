@@ -7,16 +7,9 @@ const ProjectList = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Data states
   const [projects, setProjects] = useState([]);
-  const [employees, setEmployees] = useState([]);
-
-  // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [paginationLoading, setPaginationLoading] = useState(false);
-  const [isAssigning, setIsAssigning] = useState(false);
-
-  // Search and pagination
   const [searchQuery, setSearchQuery] = useState("");
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -25,117 +18,62 @@ const ProjectList = () => {
     totalCount: 0
   });
 
-  // Assign modal
-  const [assignModal, setAssignModal] = useState({
-    isOpen: false,
-    projectId: null,
-    selectedEmployee: ""
-  });
-
   const apiEndpoint =
     user.role === "HR" ? "/projects/list/" : "/projects/manager/list/";
 
-  // Fetch projects
-  const fetchProjects = useCallback(
-    async (isPagination = false) => {
-      try {
-        if (isPagination) setPaginationLoading(true);
-        else setIsLoading(true);
+  const fetchProjects = useCallback(async (isPagination = false) => {
+    try {
+      if (isPagination) setPaginationLoading(true);
+      else setIsLoading(true);
 
-        const res = await axiosInstance.post(apiEndpoint, {
-          page_size: pagination.pageSize,
-          page: pagination.currentPage,
-          search: searchQuery
-        });
+      const res = await axiosInstance.post(apiEndpoint, {
+        page_size: pagination.pageSize,
+        page: pagination.currentPage,
+        search: searchQuery
+      });
 
-        if (res.data.status) {
-          setProjects(res.data.records || []);
-          setPagination((prev) => ({
-            ...prev,
-            totalCount: res.data.count || 0,
-            totalPages: res.data.num_pages || 1,
-            currentPage: res.data.current_page || 1
-          }));
-        }
-      } catch (err) {
-        console.error("Error fetching projects:", err);
-      } finally {
-        if (isPagination) setPaginationLoading(false);
-        else setIsLoading(false);
+      if (res.data.status) {
+        setProjects(res.data.records || []);
+        setPagination((prev) => ({
+          ...prev,
+          totalCount: res.data.count || 0,
+          totalPages: res.data.num_pages || 1,
+          currentPage: res.data.current_page || 1
+        }));
       }
-    },
-    [apiEndpoint, pagination.currentPage, pagination.pageSize, searchQuery]
-  );
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+    } finally {
+      if (isPagination) setPaginationLoading(false);
+      else setIsLoading(false);
+    }
+  }, [apiEndpoint, pagination.currentPage, pagination.pageSize, searchQuery]);
 
-  // Initial load
   useEffect(() => {
     fetchProjects(false);
   }, [fetchProjects]);
 
-  // Pagination change
   const handlePageChange = (page) => {
     setPagination((p) => ({ ...p, currentPage: page }));
     setTimeout(() => fetchProjects(true), 0);
   };
 
-  // Search submit
   const handleSearch = (e) => {
     e.preventDefault();
     setPagination((p) => ({ ...p, currentPage: 1 }));
     fetchProjects(false);
   };
 
-  // Back navigation
   const handleBack = () => navigate(-1);
 
-  // Open Assign Modal (fetch managers)
-  const openAssignModal = async (projectId) => {
-    setAssignModal({ isOpen: true, projectId, selectedEmployee: "" });
-    try {
-      const res = await axiosInstance.post("/hr-management/employees/list/", {
-        page_size: 50,
-        role: "MANAGER"
-      });
-      if (res.data.status) setEmployees(res.data.records || []);
-      else setEmployees([]);
-    } catch (err) {
-      console.error("Error fetching employees:", err);
-      setEmployees([]);
-    }
+  const handleViewSprintBoard = (projectId) => {
+    navigate(`/sprint-board/${projectId}`);
   };
 
-  const closeAssignModal = () => {
-    setAssignModal({ isOpen: false, projectId: null, selectedEmployee: "" });
+  const handleEditProject = (projectId) => {
+    navigate(`/projects/edit/${projectId}`);
   };
 
-  // Assign API call
-  const handleAssignProject = async () => {
-    if (!assignModal.selectedEmployee) {
-      alert("Please select an employee");
-      return;
-    }
-    setIsAssigning(true);
-    try {
-      const res = await axiosInstance.put("/projects/assign-manager/", {
-        id: assignModal.projectId,
-        manager_id: assignModal.selectedEmployee
-      });
-      if (res.data.status) {
-        alert("Project assigned successfully!");
-        closeAssignModal();
-        fetchProjects(false);
-      } else {
-        alert(res.data.message || "Failed to assign project");
-      }
-    } catch (err) {
-      console.error("Error assigning project:", err);
-      alert("Something went wrong");
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
-  // Pagination component
   const PaginationComp = ({
     currentPage,
     totalPages,
@@ -160,8 +98,10 @@ const ProjectList = () => {
       }
       return pages;
     };
+
     const start = (currentPage - 1) * pageSize + 1;
     const end = Math.min(currentPage * pageSize, totalCount);
+
     if (totalCount === 0) return null;
 
     return (
@@ -249,7 +189,7 @@ const ProjectList = () => {
                   <th>Status</th>
                   <th>Created</th>
                   <th>Updated</th>
-                  {user.role === 'HR' && <th>Actions</th>}
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody style={{ opacity: paginationLoading ? 0.6 : 1 }}>
@@ -261,62 +201,35 @@ const ProjectList = () => {
                     <td><span className={`status-badge ${p.status.toLowerCase()}`}>{p.status}</span></td>
                     <td>{new Date(p.created_at).toLocaleDateString()}</td>
                     <td>{new Date(p.updated_at).toLocaleDateString()}</td>
-                    {user.role === 'HR' && (
-                      <td>
-                        <button className="btn btn-sm btn-outline-primary me-2"
-                          onClick={() => openAssignModal(p.id)}>Assign</button>
-                        <button className="btn btn-sm btn-outline-jira me-2"
-                          onClick={() => navigate(`/projects/edit/${p.id}`)}>Edit</button>
-                        <button className="btn btn-sm btn-approve"
-                          onClick={() => navigate(`/projects/manage/${p.id}`)}>Manage</button>
-                      </td>
-                    )}
+                    <td className="d-flex gap-2">
+                      {/* View Sprint Board */}
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => handleViewSprintBoard(p.id)}
+                      >
+                        View Sprint Board
+                      </button>
+
+                      {/* Edit icon button */}
+                      <button
+                        className="btn btn-sm btn-outline-jira"
+                        title="Edit Project"
+                        onClick={() => handleEditProject(p.id)}
+                      >
+                         Edit
+                      </button>
+                    </td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={user.role === 'HR' ? 7 : 6} className="text-center">No projects found</td></tr>
+                  <tr><td colSpan={7} className="text-center">No projects found</td></tr>
                 )}
               </tbody>
             </table>
           )}
         </div>
+
         <PaginationComp {...pagination} onPageChange={handlePageChange} isLoading={paginationLoading} />
       </div>
-
-      {/* Assign Modal */}
-      {assignModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={closeAssignModal}></div>
-          {/* Modal */}
-          <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full z-50">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h5 className="mb-0">Assign Project</h5>
-              <button type="button" className="btn-close" onClick={closeAssignModal}></button>
-            </div>
-            <div className="p-4">
-              <label className="form-label">Select Manager</label>
-              <select className="form-select"
-                value={assignModal.selectedEmployee}
-                onChange={(e) => setAssignModal((prev) => ({ ...prev, selectedEmployee: e.target.value }))}
-              >
-                <option value="">-- Select --</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.user?.name} ({emp.user?.email})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end gap-2 p-4 border-t">
-              <button className="btn btn-secondary" onClick={closeAssignModal}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleAssignProject} disabled={isAssigning}>
-                {isAssigning ? "Assigning..." : "Assign"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };
