@@ -365,7 +365,7 @@ const EmployeeList = () => {
                             </button>
                             <button
                               className="btn btn-sm btn-outline-primary"
-                              onClick={() => navigate(`/employees/view/${employee.id}`)}
+                              onClick={() => navigate(`/employee/details/${employee.id}`)}
                             >
                               View
                             </button>

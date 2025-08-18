@@ -17,6 +17,7 @@ import ManagerDashboard from './pages/Manager/ManagerDashboard';
 import ProjectList from './pages/Manager/ProjectList';
 import EmployeeList from './pages/Common/EmployeeList';
 import SprintBoard from './pages/Sprint/SprintBoard';
+import IssueDetailsPage from './pages/Sprint/IssueDetailsPage';
 
 export default function App() {
   return (
@@ -141,6 +142,16 @@ export default function App() {
                 <ProtectedRoute allowedRoles={["MANAGER"]}>
                   <Layout>
                     <SprintBoard />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/:projectId/tasks/:taskId"
+              element={
+                <ProtectedRoute allowedRoles={["MANAGER"]}>
+                  <Layout>
+                    <IssueDetailsPage/>
                   </Layout>
                 </ProtectedRoute>
               }

@@ -1,14 +1,11 @@
-// File: src/components/springBoard/BacklogTab.jsx
-// Only change: the modal is the updated version with conditional Save and edit toggles.
-// If you already integrated IssueModal earlier, keep that import & usage.
-
-import React, { useEffect, useState, useContext, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axiosInstance from '../../services/axiosinstance';
-import { AuthContext } from '../../context/auth-context';
-import IssueModal from '../../components/springBoard/IssueModal';
+import { useNavigate } from 'react-router-dom';
+import IssueDetailsModal from './IssueDetailsModal';
 
 const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
-  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [movingId, setMovingId] = useState(null);
@@ -21,11 +18,10 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
       setLoading(true);
       setActionError('');
       setActionOk('');
-      const res = await axiosInstance.post(
-        '/projects/backlog/list/',
-        { project_id: projectId, page_size: 50 },
-        { headers: { Authorization: `Bearer ${user?.token}` } }
-      );
+      const res = await axiosInstance.post('/projects/backlog/list/', {
+        project_id: projectId,
+        page_size: 50
+      });
       setItems(res?.data?.status ? (res?.data?.records || []) : []);
     } catch (err) {
       setItems([]);
@@ -33,7 +29,7 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
     } finally {
       setLoading(false);
     }
-  }, [projectId, user?.token]);
+  }, [projectId]);
 
   useEffect(() => {
     load();
@@ -48,11 +44,11 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
     }
     try {
       setMovingId(taskId);
-      const res = await axiosInstance.put(
-        '/projects/task/move/',
-        { id: taskId, status: 'TODO', sprint_id: sprintId },
-        { headers: { Authorization: `Bearer ${user?.token}` } }
-      );
+      const res = await axiosInstance.put('/projects/task/move/', {
+        id: taskId,
+        status: 'TODO',
+        sprint_id: sprintId
+      });
       if (!res?.data?.status) {
         setActionError(res?.data?.message || 'Failed to add task to sprint');
         return;
@@ -65,6 +61,21 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
     } finally {
       setMovingId(null);
     }
+  };
+
+  const openTaskModal = (t, evt) => {
+    if (evt?.shiftKey) {
+      navigate(`/projects/${projectId}/tasks/${t.id}`);
+      return;
+    }
+    setOpenTaskId(t.id);
+  };
+
+  const openPageNewTab = (t, e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const absolute = `${window.location.origin}/projects/${projectId}/tasks/${t.id}`;
+    window.open(absolute, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -80,7 +91,7 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
             <th>Assignee</th>
             <th>Status</th>
             <th>Due</th>
-            <th style={{ width: 140 }}>Actions</th>
+            <th style={{ width: 240 }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -98,20 +109,28 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
                   e.dataTransfer.setData('text/task-id', t.id);
                   e.dataTransfer.setData('text/from', 'backlog');
                 }}
-                onClick={() => setOpenTaskId(t.id)}
+                onClick={(e) => openTaskModal(t, e)}
               >
                 <td>{t.title}</td>
                 <td>{t.priority || 'MEDIUM'}</td>
                 <td>{t.assignee_name || 'Unassigned'}</td>
                 <td>{t.status}</td>
                 <td>{t.due_date || '-'}</td>
-                <td>
+                <td style={{ display: 'flex', gap: 8 }}>
                   <button
                     className="btn-jira btn-sm"
                     disabled={!sprintId || movingId === t.id}
                     onClick={(e) => { e.stopPropagation(); addToSprint(t.id); }}
                   >
                     {movingId === t.id ? 'Adding…' : 'Add to sprint'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-jira"
+                    title="Open as page"
+                    onClick={(e) => openPageNewTab(t, e)}
+                  >
+                    ↗
                   </button>
                 </td>
               </tr>
@@ -121,13 +140,14 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
       </table>
 
       {openTaskId ? (
-        <IssueModal
+        <IssueDetailsModal
           projectId={projectId}
           taskId={openTaskId}
-          sprintId={sprintId}
           onClose={() => setOpenTaskId('')}
-          onChanged={load}
-          reloadLists={onMoved}
+          onOpenAsPage={() => {
+            const absolute = `${window.location.origin}/projects/${projectId}/tasks/${openTaskId}`;
+            window.open(absolute, '_blank', 'noopener,noreferrer');
+          }}
         />
       ) : null}
     </div>
