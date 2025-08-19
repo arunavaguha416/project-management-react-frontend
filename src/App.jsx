@@ -18,6 +18,7 @@ import ProjectList from './pages/Manager/ProjectList';
 import EmployeeList from './pages/Common/EmployeeList';
 import SprintBoard from './pages/Sprint/SprintBoard';
 import IssueDetailsPage from './pages/Sprint/IssueDetailsPage';
+import EditProject from './pages/Manager/EditProject';
 
 export default function App() {
   return (
@@ -65,6 +66,17 @@ export default function App() {
                 <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
                   <Layout>
                     <AddProject />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+
+            <Route 
+              path="/edit-project" 
+              element={
+                <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
+                  <Layout>
+                    <EditProject />
                   </Layout>
                 </ProtectedRoute>
               } 

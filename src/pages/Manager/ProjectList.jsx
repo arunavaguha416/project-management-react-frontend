@@ -71,7 +71,7 @@ const ProjectList = () => {
   };
 
   const handleEditProject = (projectId) => {
-    navigate(`/projects/edit/${projectId}`);
+    navigate(`/project/details/${projectId}`);
   };
 
   const PaginationComp = ({

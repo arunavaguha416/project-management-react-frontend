@@ -474,3 +474,10 @@
 .btn-jira:hover {
   background: var(--jira-primary-hover, #0747A6) !important;
 }
+
+
+/* Optional: type-specific chip colors */
+.badge.type-task { background: #F4F5F7; border: 1px solid #EBECF0; color: #172B4D; }
+.badge.type-story { background: #E3FCEF; border: 1px solid #57D9A3; color: #006644; }
+.badge.type-bug { background: #FFEBE6; border: 1px solid #FF5630; color: #BF2600; }
+.badge.type-epic { background: #DEEBFF; border: 1px solid #0747A6; color: #0747A6; }
