@@ -216,7 +216,7 @@ const ProjectList = () => {
                         title="Edit Project"
                         onClick={() => handleEditProject(p.id)}
                       >
-                         Edit
+                         View
                       </button>
                     </td>
                   </tr>

@@ -72,7 +72,7 @@ export default function App() {
             />
 
             <Route 
-              path="/edit-project" 
+              path="/edit-project/:id" 
               element={
                 <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
                   <Layout>

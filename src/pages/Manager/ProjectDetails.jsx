@@ -1,3 +1,5 @@
+// File: src/pages/projects/ProjectDetails.jsx
+
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/auth-context";
@@ -7,163 +9,187 @@ const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+
   const [projectData, setProjectData] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [milestones, setMilestones] = useState([]);
+  const [files, setFiles] = useState([]); // NEW: files list
+
   const [stats, setStats] = useState({
     totalTasks: 0,
     completedTasks: 0,
     pendingTasks: 0,
-    teamSize: 0
+    teamSize: 0,
   });
+
   const [errors, setErrors] = useState({
     projectDetails: null,
     teamMembers: null,
     tasks: null,
-    milestones: null
+    milestones: null,
+    files: null, // NEW
   });
+
   const [isLoading, setIsLoading] = useState(true);
   const [loadingStates, setLoadingStates] = useState({
     projectDetails: true,
     teamMembers: true,
     tasks: true,
-    milestones: true
+    milestones: true,
+    files: true, // NEW
   });
 
-  // Move checkAllLoaded to the top and memoize it with useCallback
+  // Loading aggregator
   const checkAllLoaded = useCallback(() => {
     setTimeout(() => {
-      setLoadingStates(current => {
-        const allLoaded = !Object.values(current).some(loading => loading);
+      setLoadingStates((current) => {
+        const allLoaded = !Object.values(current).some((loading) => loading);
         if (allLoaded) {
           setIsLoading(false);
         }
         return current;
       });
     }, 100);
-  }, []); // Empty dependency array since it doesn't depend on any external values
+  }, []);
 
-  // Now include checkAllLoaded in the dependency arrays where it's used
+  // Data fetchers
   const fetchProjectDetails = useCallback(async () => {
     try {
       const projectResp = await axiosInstance.get(`/projects/details/${id}/`, {
-        headers: { Authorization: `Bearer ${user.token}` }
+        headers: { Authorization: `Bearer ${user.token}` },
       });
       setProjectData(projectResp.data.records);
-      setErrors(prev => ({ ...prev, projectDetails: null }));
+      setErrors((prev) => ({ ...prev, projectDetails: null }));
     } catch (error) {
       console.error("Error fetching project details:", error);
-      setErrors(prev => ({ ...prev, projectDetails: "Failed to load project details" }));
+      setErrors((prev) => ({
+        ...prev,
+        projectDetails: "Failed to load project details",
+      }));
     } finally {
-      setLoadingStates(prev => ({ ...prev, projectDetails: false }));
+      setLoadingStates((prev) => ({ ...prev, projectDetails: false }));
       checkAllLoaded();
     }
-  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
+  }, [id, user.token, checkAllLoaded]);
 
   const fetchTeamMembers = useCallback(async () => {
     try {
-      const teamResp = await axiosInstance.post(`/teams/team-members/`, {
-        project_id: id,
-        page_size: 20
-      }, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
+      const teamResp = await axiosInstance.post(
+        `/teams/team-members/`,
+        { project_id: id, page_size: 20 },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
       const members = teamResp.data.records || [];
       setTeamMembers(members);
-      setStats(prev => ({
-        ...prev,
-        teamSize: members.length
-      }));
-      setErrors(prev => ({ ...prev, teamMembers: null }));
+      setStats((prev) => ({ ...prev, teamSize: members.length }));
+      setErrors((prev) => ({ ...prev, teamMembers: null }));
     } catch (error) {
       console.error("Error fetching team members:", error);
-      setErrors(prev => ({ ...prev, teamMembers: "Failed to load team members" }));
+      setErrors((prev) => ({
+        ...prev,
+        teamMembers: "Failed to load team members",
+      }));
     } finally {
-      setLoadingStates(prev => ({ ...prev, teamMembers: false }));
+      setLoadingStates((prev) => ({ ...prev, teamMembers: false }));
       checkAllLoaded();
     }
-  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
+  }, [id, user.token, checkAllLoaded]);
 
   const fetchTasks = useCallback(async () => {
     try {
-      const tasksResp = await axiosInstance.post(`/projects/tasks/list/`, {
-        project_id: id,
-        page_size: 10
-      }, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
+      const tasksResp = await axiosInstance.post(
+        `/projects/tasks/list/`,
+        { project_id: id, page_size: 10 },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
       const projectTasks = tasksResp.data.records || [];
       setTasks(projectTasks);
-      
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         totalTasks: projectTasks.length,
-        completedTasks: projectTasks.filter(t => t.status === 'COMPLETED').length,
-        pendingTasks: projectTasks.filter(t => t.status === 'PENDING').length
+        completedTasks: projectTasks.filter((t) => t.status === "COMPLETED").length,
+        pendingTasks: projectTasks.filter((t) => t.status === "PENDING").length,
       }));
-      
-      setErrors(prev => ({ ...prev, tasks: null }));
+      setErrors((prev) => ({ ...prev, tasks: null }));
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      setErrors(prev => ({ ...prev, tasks: "Failed to load tasks" }));
+      setErrors((prev) => ({ ...prev, tasks: "Failed to load tasks" }));
     } finally {
-      setLoadingStates(prev => ({ ...prev, tasks: false }));
+      setLoadingStates((prev) => ({ ...prev, tasks: false }));
       checkAllLoaded();
     }
-  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
+  }, [id, user.token, checkAllLoaded]);
 
   const fetchMilestones = useCallback(async () => {
     try {
-      const milestonesResp = await axiosInstance.post(`/projects/milestones/list/`, {
-        project_id: id,
-        page_size: 10
-      }, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
+      const milestonesResp = await axiosInstance.post(
+        `/projects/milestones/list/`,
+        { project_id: id, page_size: 10 },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
       setMilestones(milestonesResp.data.records || []);
-      setErrors(prev => ({ ...prev, milestones: null }));
+      setErrors((prev) => ({ ...prev, milestones: null }));
     } catch (error) {
       console.error("Error fetching milestones:", error);
-      setErrors(prev => ({ ...prev, milestones: "Failed to load milestones" }));
+      setErrors((prev) => ({
+        ...prev,
+        milestones: "Failed to load milestones",
+      }));
     } finally {
-      setLoadingStates(prev => ({ ...prev, milestones: false }));
+      setLoadingStates((prev) => ({ ...prev, milestones: false }));
       checkAllLoaded();
     }
-  }, [id, user.token, checkAllLoaded]); // Include checkAllLoaded as dependency
+  }, [id, user.token, checkAllLoaded]);
 
-  // Memoize the main fetchData function
+  const fetchFiles = useCallback(async () => {
+    try {
+      const res = await axiosInstance.post(
+        `/projects/upload-files-list/`,
+        { project_id: id },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setFiles(res?.data?.records || []);
+      setErrors((prev) => ({ ...prev, files: null }));
+    } catch (error) {
+      console.error("Error fetching files:", error);
+      setErrors((prev) => ({ ...prev, files: "Failed to load files" }));
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, files: false }));
+      checkAllLoaded();
+    }
+  }, [id, user.token, checkAllLoaded]);
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
-    
-    // Fetch all data concurrently
     await Promise.allSettled([
       fetchProjectDetails(),
       fetchTeamMembers(),
       fetchTasks(),
-      fetchMilestones()
+      fetchMilestones(),
+      fetchFiles(),
     ]);
-  }, [fetchProjectDetails, fetchTeamMembers, fetchTasks, fetchMilestones]);
+  }, [fetchProjectDetails, fetchTeamMembers, fetchTasks, fetchMilestones, fetchFiles]);
 
-  // Now include fetchData in the dependency array
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleAddTeamMember = () => {
-    navigate(`/project/${id}/add-member`);
-  };
+  // Actions
+  const handleAddTeamMember = () => navigate(`/project/${id}/add-member`);
+  const handleEditProject = () => navigate(`/edit-project/${id}`);
 
-  const handleEditProject = () => {
-    navigate(`/edit-project/${id}`);
-  };
-
+  // UI helpers
   const ErrorMessage = ({ message, onRetry }) => (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
       <div className="flex items-center">
         <div className="flex-shrink-0">
           <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
         <div className="ml-3 flex-1">
@@ -171,10 +197,7 @@ const ProjectDetails = () => {
         </div>
         {onRetry && (
           <div className="ml-3">
-            <button
-              onClick={onRetry}
-              className="text-sm text-red-600 hover:text-red-800 underline"
-            >
+            <button onClick={onRetry} className="text-sm text-red-600 hover:text-red-800 underline">
               Retry
             </button>
           </div>
@@ -190,7 +213,7 @@ const ProjectDetails = () => {
     </div>
   );
 
-  // Show loading only for the first few seconds or if project details are still loading
+  // Initial loading state
   if (isLoading && loadingStates.projectDetails) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -217,7 +240,7 @@ const ProjectDetails = () => {
                 >
                   Back to Dashboard
                 </button>
-                {(user.role === 'HR' || user.role === 'ADMIN' || user.role === 'MANAGER') && (
+                {(user.role === "HR" || user.role === "ADMIN" || user.role === "MANAGER") && (
                   <>
                     <button
                       onClick={handleAddTeamMember}
@@ -239,10 +262,7 @@ const ProjectDetails = () => {
             {/* Show general errors */}
             {errors.projectDetails && (
               <div className="mt-4">
-                <ErrorMessage 
-                  message={errors.projectDetails} 
-                  onRetry={fetchProjectDetails}
-                />
+                <ErrorMessage message={errors.projectDetails} onRetry={fetchProjectDetails} />
               </div>
             )}
           </div>
@@ -322,15 +342,12 @@ const ProjectDetails = () => {
             </div>
           </div>
 
-          {/* Project Information Card */}
+          {/* Project Information */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-6">Project Information</h2>
-            
+
             {errors.projectDetails ? (
-              <ErrorMessage 
-                message={errors.projectDetails} 
-                onRetry={fetchProjectDetails}
-              />
+              <ErrorMessage message={errors.projectDetails} onRetry={fetchProjectDetails} />
             ) : loadingStates.projectDetails ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(6)].map((_, index) => (
@@ -343,40 +360,50 @@ const ProjectDetails = () => {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Project Name</div>
+                    <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                      Project Name
+                    </div>
                     <div className="mt-1 text-lg font-semibold text-gray-900">{projectData?.name || "--"}</div>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Status</div>
                     <div className="mt-1">
-                      <span className={`inline-flex px-2 py-1 text-sm font-semibold rounded-full ${
-                        projectData?.status === "Ongoing"
-                          ? "bg-green-100 text-green-800"
-                          : projectData?.status === "Completed"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}>
+                      <span
+                        className={`inline-flex px-2 py-1 text-sm font-semibold rounded-full ${
+                          projectData?.status === "Ongoing"
+                            ? "bg-green-100 text-green-800"
+                            : projectData?.status === "Completed"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
                         {projectData?.status || "--"}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Manager</div>
-                    <div className="mt-1 text-lg font-semibold text-gray-900">{projectData?.manager_name || "Unassigned"}</div>
+                    <div className="mt-1 text-lg font-semibold text-gray-900">
+                      {projectData?.manager_name || "Unassigned"}
+                    </div>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Company</div>
-                    <div className="mt-1 text-lg font-semibold text-gray-900">{projectData?.company_name || "--"}</div>
+                    <div className="mt-1 text-lg font-semibold text-gray-900">
+                      {projectData?.company_name || "--"}
+                    </div>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Start Date</div>
-                    <div className="mt-1 text-lg font-semibold text-gray-900">{projectData?.start_date || "--"}</div>
+                    <div className="mt-1 text-lg font-semibold text-gray-900">
+                      {projectData?.start_date || "--"}
+                    </div>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">End Date</div>
                     <div className="mt-1 text-lg font-semibold text-gray-900">{projectData?.end_date || "--"}</div>
@@ -385,30 +412,28 @@ const ProjectDetails = () => {
 
                 {projectData?.description && (
                   <div className="mt-6">
-                    <div className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Description</div>
-                    <div className="text-gray-900 bg-gray-50 p-4 rounded-lg">
-                      {projectData.description}
+                    <div className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">
+                      Description
                     </div>
+                    <div className="text-gray-900 bg-gray-50 p-4 rounded-lg">{projectData.description}</div>
                   </div>
                 )}
               </>
             )}
           </div>
 
+          {/* Grid: Left = Files, Right = Recent Tasks */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Team Members Card */}
+            {/* Files Card */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Team Members</h2>
-                <span className="text-sm text-gray-500">{teamMembers.length} members</span>
+                <h2 className="text-xl font-semibold text-gray-800">Files</h2>
+                <span className="text-sm text-gray-500">{files?.length || 0} files</span>
               </div>
 
-              {errors.teamMembers ? (
-                <ErrorMessage 
-                  message={errors.teamMembers} 
-                  onRetry={fetchTeamMembers}
-                />
-              ) : loadingStates.teamMembers ? (
+              {errors.files ? (
+                <ErrorMessage message={errors.files} onRetry={fetchFiles} />
+              ) : loadingStates.files ? (
                 <div className="space-y-2">
                   <LoadingSpinner />
                   <LoadingSpinner />
@@ -416,35 +441,59 @@ const ProjectDetails = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {teamMembers.length > 0 ? (
-                    teamMembers.map((member, index) => (
-                      <div 
-                        key={index} 
-                        className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer"
-                        onClick={() => navigate(`/user/details/${member.user_id || member.id}`)}
+                  {files.length > 0 ? (
+                    files.map((f) => (
+                      <div
+                        key={f.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
                       >
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-blue-600">
-                            {member.name?.charAt(0) || member.user?.name?.charAt(0)}
-                          </span>
-                        </div>
-                        <div className="ml-4 flex-1">
-                          <div className="text-sm font-medium text-gray-900">
-                            {member.name || member.user?.name}
+                        <div className="flex items-center min-w-0">
+                          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-sm font-medium text-indigo-700">
+                              {(f.extension || f.filename?.split(".").pop() || "?")
+                                .toString()
+                                .slice(0, 3)
+                                .toUpperCase()}
+                            </span>
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {member.role || member.designation || "Team Member"}
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">
+                              {f.url ? (
+                                <a
+                                  href={f.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="hover:underline"
+                                  title={f.filename}
+                                >
+                                  {f.filename}
+                                </a>
+                              ) : (
+                                <span title={f.filename}>{f.filename}</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {(f.extension || "").toUpperCase()} •{" "}
+                              {Math.round(((f.size || 0) / 1024) * 10) / 10}KB • {f.created_at || ""}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {member.join_date || ""}
-                        </div>
+                        {f.url ? (
+                          <a
+                            href={f.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-xs font-medium whitespace-nowrap ml-3"
+                          >
+                            Download
+                          </a>
+                        ) : null}
                       </div>
                     ))
                   ) : (
                     <div className="text-center text-gray-500 py-8">
-                      <div className="text-4xl mb-2">👥</div>
-                      <div>No team members assigned</div>
+                      <div className="text-4xl mb-2">📁</div>
+                      <div>No files uploaded</div>
                     </div>
                   )}
                 </div>
@@ -464,10 +513,7 @@ const ProjectDetails = () => {
               </div>
 
               {errors.tasks ? (
-                <ErrorMessage 
-                  message={errors.tasks} 
-                  onRetry={fetchTasks}
-                />
+                <ErrorMessage message={errors.tasks} onRetry={fetchTasks} />
               ) : loadingStates.tasks ? (
                 <div className="space-y-2">
                   <LoadingSpinner />
@@ -478,28 +524,28 @@ const ProjectDetails = () => {
                 <div className="space-y-4">
                   {tasks.length > 0 ? (
                     tasks.map((task, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div key={`${task.id}-${index}`} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h4 className="text-sm font-medium text-gray-900 mb-1">
                               {task.title || task.name}
                             </h4>
-                            <p className="text-sm text-gray-500 mb-2">
-                              {task.description}
-                            </p>
+                            <p className="text-sm text-gray-500 mb-2">{task.description}</p>
                             <div className="flex items-center space-x-4 text-xs text-gray-400">
                               <span>Assigned to: {task.assignee_name || "Unassigned"}</span>
                               <span>Due: {task.due_date || "No due date"}</span>
                             </div>
                           </div>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            task.status === 'COMPLETED' 
-                              ? 'bg-green-100 text-green-800'
-                              : task.status === 'IN_PROGRESS'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {task.status || 'PENDING'}
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              task.status === "COMPLETED"
+                                ? "bg-green-100 text-green-800"
+                                : task.status === "IN_PROGRESS"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {task.status || "PENDING"}
                           </span>
                         </div>
                       </div>
@@ -515,62 +561,117 @@ const ProjectDetails = () => {
             </div>
           </div>
 
-          {/* Milestones */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-800">Project Milestones</h2>
-              <span className="text-sm text-gray-500">{milestones.length} milestones</span>
+          {/* Milestones + Team Members split row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Team Members Card */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Team Members</h2>
+                <span className="text-sm text-gray-500">{teamMembers.length} members</span>
+              </div>
+
+              {errors.teamMembers ? (
+                <ErrorMessage message={errors.teamMembers} onRetry={fetchTeamMembers} />
+              ) : loadingStates.teamMembers ? (
+                <div className="space-y-2">
+                  <LoadingSpinner />
+                  <LoadingSpinner />
+                  <LoadingSpinner />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {teamMembers.length > 0 ? (
+                    teamMembers.map((member, idx) => (
+                      <div
+                        key={member.employee_id || member.id || idx}
+                        className="flex items-center p-3 border border-gray-200 rounded-lg"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-3 text-sm font-semibold">
+                          {(member.employee_name || member.name || "?").slice(0, 1).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-medium text-gray-900">
+                              {member.employee_name || member.name || "Member"}
+                            </h4>
+                            {member.designation ? (
+                              <span className="text-xs text-gray-500">{member.designation}</span>
+                            ) : null}
+                          </div>
+                          {(member.employee_email || member.email) && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {member.employee_email || member.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <div className="text-4xl mb-2">👥</div>
+                      <div>No team members found</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {errors.milestones ? (
-              <ErrorMessage 
-                message={errors.milestones} 
-                onRetry={fetchMilestones}
-              />
-            ) : loadingStates.milestones ? (
-              <div className="space-y-2">
-                <LoadingSpinner />
-                <LoadingSpinner />
-                <LoadingSpinner />
+            {/* Project Milestones Card */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Project Milestones</h2>
+                <span className="text-sm text-gray-500">{milestones.length} milestones</span>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {milestones.length > 0 ? (
-                  milestones.map((milestone, index) => (
-                    <div key={index} className="flex items-center p-4 border border-gray-200 rounded-lg">
-                      <div className={`w-4 h-4 rounded-full mr-4 ${
-                        milestone.status === 'COMPLETED' 
-                          ? 'bg-green-500' 
-                          : milestone.status === 'IN_PROGRESS'
-                          ? 'bg-blue-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-sm font-medium text-gray-900">
-                            {milestone.title || milestone.name}
-                          </h4>
-                          <span className="text-xs text-gray-500">
-                            {milestone.due_date || milestone.target_date}
-                          </span>
+
+              {errors.milestones ? (
+                <ErrorMessage message={errors.milestones} onRetry={fetchMilestones} />
+              ) : loadingStates.milestones ? (
+                <div className="space-y-2">
+                  <LoadingSpinner />
+                  <LoadingSpinner />
+                  <LoadingSpinner />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {milestones.length > 0 ? (
+                    milestones.map((milestone, index) => (
+                      <div key={`${milestone.id}-${index}`} className="flex items-center p-4 border border-gray-200 rounded-lg">
+                        <div
+                          className={`w-4 h-4 rounded-full mr-4 ${
+                            milestone.status === "COMPLETED"
+                              ? "bg-green-500"
+                              : milestone.status === "IN_PROGRESS"
+                              ? "bg-blue-500"
+                              : "bg-gray-300"
+                          }`}
+                        ></div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-medium text-gray-900">
+                              {milestone.title || milestone.name}
+                            </h4>
+                            <span className="text-xs text-gray-500">
+                              {milestone.due_date || milestone.target_date}
+                            </span>
+                          </div>
+                          {milestone.description && (
+                            <p className="text-sm text-gray-500 mt-1">{milestone.description}</p>
+                          )}
                         </div>
-                        {milestone.description && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            {milestone.description}
-                          </p>
-                        )}
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <div className="text-4xl mb-2">🎯</div>
+                      <div>No milestones set</div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center text-gray-500 py-8">
-                    <div className="text-4xl mb-2">🎯</div>
-                    <div>No milestones set</div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+          {/* End split row */}
+
         </div>
       </div>
     </div>
