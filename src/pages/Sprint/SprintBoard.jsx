@@ -10,12 +10,13 @@ const BacklogTab = React.lazy(() => import('../../components/springBoard/Backlog
 const BoardTab = React.lazy(() => import('../../components/springBoard/BoardTab'));
 const AllWorkTab = React.lazy(() => import('../../components/springBoard/AllWorkTab'));
 const ReleasesTab = React.lazy(() => import('../../components/springBoard/ReleasesTab'));
+const AIOverview = React.lazy(() => import('../../components/springBoard/AIOverview'));
 
 // Create task modal
 import CreateIssueQuickModal from '../../components/springBoard/CreateIssueQuickModal';
 
 const SprintBoard = () => {
-  // Tabs
+  // Active tab state
   const [active, setActive] = useState('board');
 
   // Trigger children to refetch
@@ -26,19 +27,20 @@ const SprintBoard = () => {
   const { projectId: routeProjectId } = useParams();
   const projectId = routeProjectId || '';
 
-  // Sprint context (provided by BoardTab)
+  // Sprint context
   const [activeSprintId, setActiveSprintId] = useState('');
   const [isSprintActive, setIsSprintActive] = useState(false);
+  const [sprintName, setSprintName] = useState('');
 
-  // UI
+  // UI state
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
 
-  // Auth (if your axios instance doesn’t auto-attach tokens)
+  // Auth context
   const { user } = useContext(AuthContext);
 
-  // Start sprint
+  // Start sprint function
   const startSprint = useCallback(
     async (projId, sprintId) => {
       if (!projId || !sprintId) {
@@ -51,7 +53,9 @@ const SprintBoard = () => {
         const res = await axiosInstance.post(
           '/projects/sprints/start/',
           { project_id: projId, sprint_id: sprintId },
-          user?.token ? { headers: { Authorization: `Bearer ${user.token}` } } : undefined
+          user?.token
+            ? { headers: { Authorization: `Bearer ${user.token}` } }
+            : undefined
         );
         if (!res?.data?.status) {
           setStatusMsg(res?.data?.message || 'Failed to start sprint');
@@ -70,7 +74,7 @@ const SprintBoard = () => {
     [reloadAll, user?.token]
   );
 
-  // End sprint
+  // End sprint function
   const endSprint = useCallback(
     async (projId, sprintId) => {
       if (!projId || !sprintId) {
@@ -83,7 +87,9 @@ const SprintBoard = () => {
         const res = await axiosInstance.post(
           '/projects/sprints/end/',
           { project_id: projId, sprint_id: sprintId },
-          user?.token ? { headers: { Authorization: `Bearer ${user.token}` } } : undefined
+          user?.token
+            ? { headers: { Authorization: `Bearer ${user.token}` } }
+            : undefined
         );
         if (!res?.data?.status) {
           setStatusMsg(res?.data?.message || 'Failed to end sprint');
@@ -102,127 +108,188 @@ const SprintBoard = () => {
     [reloadAll, user?.token]
   );
 
-  // Optional: keyboard nav between tabs
+  // Handle sprint context updates from child components
+  const updateSprintContext = useCallback((sprintId, isActive, name = '') => {
+    setActiveSprintId(sprintId);
+    setIsSprintActive(isActive);
+    setSprintName(name);
+  }, []);
+
+  // Keyboard navigation between tabs
   const onTabsKeyDown = (e) => {
-    const order = ['board', 'backlog', 'all', 'releases'];
+    const order = ['ai', 'board', 'backlog', 'all', 'releases'];
     const idx = order.indexOf(active);
-    if (e.key === 'ArrowRight') setActive(order[(idx + 1) % order.length]);
-    if (e.key === 'ArrowLeft') setActive(order[(idx - 1 + order.length) % order.length]);
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setActive(order[(idx + 1) % order.length]);
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setActive(order[(idx - 1 + order.length) % order.length]);
+    }
   };
 
+  // Handle task creation success
+  const handleTaskCreated = useCallback(() => {
+    reloadAll();
+    setShowCreate(false);
+  }, [reloadAll]);
+
+  // Clear status message
+  const clearStatusMsg = useCallback(() => {
+    setStatusMsg('');
+  }, []);
+
   return (
-    <>
-      {/* Tabs header */}
-      <div className="sb-tabs elevated" role="tablist" aria-label="Sprint sections" onKeyDown={onTabsKeyDown}>
-        <button
-          role="tab"
-          aria-selected={active === 'board'}
-          tabIndex={active === 'board' ? 0 : -1}
-          className={`sb-tab ${active === 'board' ? 'active' : ''}`}
-          onClick={() => setActive('board')}
-        >
-          Board
-        </button>
-        <button
-          role="tab"
-          aria-selected={active === 'backlog'}
-          tabIndex={active === 'backlog' ? 0 : -1}
-          className={`sb-tab ${active === 'backlog' ? 'active' : ''}`}
-          onClick={() => setActive('backlog')}
-        >
-          Backlog
-        </button>
-        <button
-          role="tab"
-          aria-selected={active === 'all'}
-          tabIndex={active === 'all' ? 0 : -1}
-          className={`sb-tab ${active === 'all' ? 'active' : ''}`}
-          onClick={() => setActive('all')}
-        >
-          All work
-        </button>
-        <button
-          role="tab"
-          aria-selected={active === 'releases'}
-          tabIndex={active === 'releases' ? 0 : -1}
-          className={`sb-tab ${active === 'releases' ? 'active' : ''}`}
-          onClick={() => setActive('releases')}
-        >
-          Releases
-        </button>
-
-        <div className="sb-tabs-actions">
-          <button className="sb-reload" onClick={reloadAll} title="Reload data">Reload</button>
-
-          <button
-            className="btn-jira"
-            style={{ padding: '6px 12px', borderRadius: 6 }}
-            onClick={() => setShowCreate(true)}
-            title="Create task"
-          >
-            + Create task
-          </button>
-
-          {/* Toggle Start/End based on isSprintActive; keep your original disabled condition */}
-          {isSprintActive ? (
-            <button
-              className="btn btn-outline-jira"
-              style={{ padding: '6px 12px', borderRadius: 6 }}
-              onClick={() => endSprint(projectId, activeSprintId)}
-              title="End sprint"
-              disabled={busy || !projectId || !activeSprintId}
-            >
-              {busy ? 'Ending…' : 'End sprint'}
-            </button>
-          ) : (
-            <button
-              className="btn btn-outline-jira"
-              style={{ padding: '6px 12px', borderRadius: 6 }}
-              onClick={() => startSprint(projectId, activeSprintId)}
-              title="Start sprint"
-              disabled={busy || !projectId || !activeSprintId}
-            >
-              {busy ? 'Starting…' : 'Start sprint'}
-            </button>
+    <div className="sprint-board-container">
+      {/* Header with project info and actions */}
+      <div className="sprint-board-header">
+        <div className="project-info">
+          <h2>Sprint Board</h2>
+          {activeSprintId && (
+            <div className="active-sprint-info">
+              <span className={`sprint-status ${isSprintActive ? 'active' : 'inactive'}`}>
+                {sprintName || 'Current Sprint'}
+              </span>
+              {isSprintActive && (
+                <button
+                  className="btn-danger btn-sm"
+                  onClick={() => endSprint(projectId, activeSprintId)}
+                  disabled={busy}
+                >
+                  End Sprint
+                </button>
+              )}
+            </div>
           )}
+        </div>
+
+        <div className="board-actions">
+          <button
+            className="btn-primary"
+            onClick={() => setShowCreate(true)}
+            disabled={busy}
+          >
+            + Create Issue
+          </button>
+          
+          <button
+            className="sb-reload"
+            onClick={reloadAll}
+            disabled={busy}
+            title="Refresh all data"
+          >
+            {busy ? '⟳' : '↻'} Reload
+          </button>
         </div>
       </div>
 
+      {/* Status message */}
       {statusMsg && (
-        <div style={{ padding: '6px 10px', color: 'var(--jira-muted-text, #42526E)', fontSize: 12 }}>
-          {statusMsg}
+        <div className={`status-message ${statusMsg.includes('failed') || statusMsg.includes('error') ? 'error' : 'success'}`}>
+          <span>{statusMsg}</span>
+          <button onClick={clearStatusMsg} className="close-btn" aria-label="Close message">&times;</button>
         </div>
       )}
 
-      {/* Content */}
-      <div className="sb-content">
-        <Suspense fallback={<div>Loading…</div>}>
-          {active === 'board' && (
-            <BoardTab
+      {/* Tabs navigation */}
+      <div className="sb-tabs" role="tablist" onKeyDown={onTabsKeyDown}>
+        <button
+          className={`sb-tab ${active === 'ai' ? 'active' : ''}`}
+          role="tab"
+          aria-selected={active === 'ai'}
+          tabIndex={active === 'ai' ? 0 : -1}
+          onClick={() => setActive('ai')}
+        >
+          <span role="img" aria-label="AI">🤖</span> AI Overview
+        </button>
+
+        <button
+          className={`sb-tab ${active === 'board' ? 'active' : ''}`}
+          role="tab"
+          aria-selected={active === 'board'}
+          tabIndex={active === 'board' ? 0 : -1}
+          onClick={() => setActive('board')}
+        >
+          <span role="img" aria-label="Board">📋</span> Board
+        </button>
+
+        <button
+          className={`sb-tab ${active === 'backlog' ? 'active' : ''}`}
+          role="tab"
+          aria-selected={active === 'backlog'}
+          tabIndex={active === 'backlog' ? 0 : -1}
+          onClick={() => setActive('backlog')}
+        >
+          <span role="img" aria-label="Backlog">📝</span> Backlog
+        </button>
+
+        <button
+          className={`sb-tab ${active === 'all' ? 'active' : ''}`}
+          role="tab"
+          aria-selected={active === 'all'}
+          tabIndex={active === 'all' ? 0 : -1}
+          onClick={() => setActive('all')}
+        >
+          <span role="img" aria-label="All Work">📊</span> All Work
+        </button>
+
+        <button
+          className={`sb-tab ${active === 'releases' ? 'active' : ''}`}
+          role="tab"
+          aria-selected={active === 'releases'}
+          tabIndex={active === 'releases' ? 0 : -1}
+          onClick={() => setActive('releases')}
+        >
+          <span role="img" aria-label="Releases">🚀</span> Releases
+        </button>
+      </div>
+
+      {/* Tab content area */}
+      <div className="tab-content" role="tabpanel" aria-labelledby={`${active}-tab`}>
+        <Suspense fallback={
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        }>
+          {active === 'ai' && (
+            <AIOverview
               projectId={projectId}
               sprintId={activeSprintId}
-              // BoardTab should call this once sprint meta is known:
-              // onResolvedSprintMeta({ id: '<uuid>', isActive: true|false })
-              onResolvedSprintMeta={(meta) => {
-                if (meta?.id) setActiveSprintId(meta.id);
-                if (typeof meta?.isActive === 'boolean') setIsSprintActive(meta.isActive);
-              }}
+              onCardsCreated={reloadAll}
               reloadKey={reloadKey}
             />
           )}
+
+          {active === 'board' && (
+            <BoardTab
+              projectId={projectId}
+              reloadKey={reloadKey}
+              onSprintContextUpdate={updateSprintContext}
+              startSprint={startSprint}
+              endSprint={endSprint}
+              activeSprintId={activeSprintId}
+              isSprintActive={isSprintActive}
+            />
+          )}
+
           {active === 'backlog' && (
             <BacklogTab
               projectId={projectId}
               sprintId={activeSprintId}
               reloadKey={reloadKey}
+              onMoved={reloadAll}
             />
           )}
+
           {active === 'all' && (
             <AllWorkTab
               projectId={projectId}
               reloadKey={reloadKey}
             />
           )}
+
           {active === 'releases' && (
             <ReleasesTab
               projectId={projectId}
@@ -236,15 +303,22 @@ const SprintBoard = () => {
       {showCreate && (
         <CreateIssueQuickModal
           projectId={projectId}
-          sprintId={activeSprintId || null}
+          sprintId={activeSprintId}
           onClose={() => setShowCreate(false)}
-          onCreated={() => {
-            setShowCreate(false);
-            reloadAll();
-          }}
+          onCreated={handleTaskCreated}
         />
       )}
-    </>
+
+      {/* Loading overlay */}
+      {busy && (
+        <div className="loading-overlay">
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <p>Processing...</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
