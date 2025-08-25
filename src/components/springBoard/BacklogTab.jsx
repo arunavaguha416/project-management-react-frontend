@@ -5,7 +5,6 @@ import IssueDetailsModal from './IssueDetailsModal';
 
 const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
   const navigate = useNavigate();
-
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [movingId, setMovingId] = useState(null);
@@ -42,6 +41,7 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
       setActionError('No active sprint to add into.');
       return;
     }
+
     try {
       setMovingId(taskId);
       const res = await axiosInstance.put('/projects/task/move/', {
@@ -49,10 +49,12 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
         status: 'TODO',
         sprint_id: sprintId
       });
+
       if (!res?.data?.status) {
         setActionError(res?.data?.message || 'Failed to add task to sprint');
         return;
       }
+
       setActionOk('Task added to sprint.');
       await load();
       if (onMoved) onMoved();
@@ -78,78 +80,171 @@ const BacklogTab = ({ projectId, sprintId, onMoved, reloadKey }) => {
     window.open(absolute, '_blank', 'noopener,noreferrer');
   };
 
-  return (
-    <div className="jira-card">
-      {actionError ? <div className="alert alert-danger" style={{ marginBottom: 12 }}>{actionError}</div> : null}
-      {actionOk ? <div className="alert alert-success" style={{ marginBottom: 12 }}>{actionOk}</div> : null}
+  const getPriorityColor = (priority) => {
+    switch (priority?.toUpperCase()) {
+      case 'CRITICAL': return '#d32f2f';
+      case 'HIGH': return '#f57c00';
+      case 'MEDIUM': return '#1976d2';
+      case 'LOW': return '#388e3c';
+      default: return '#757575';
+    }
+  };
 
-      <table className="table table-hover">
-        <thead>
-          <tr>
-            <th>Issue</th>
-            <th>Priority</th>
-            <th>Assignee</th>
-            <th>Status</th>
-            <th>Due</th>
-            <th style={{ width: 240 }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr><td colSpan="6">Loading backlog…</td></tr>
-          ) : items.length === 0 ? (
-            <tr><td colSpan="6">No backlog items</td></tr>
-          ) : (
-            items.map((t) => (
-              <tr
-                key={t.id}
-                className="clickable-row"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/task-id', t.id);
-                  e.dataTransfer.setData('text/from', 'backlog');
-                }}
+  const getPriorityIcon = (priority) => {
+    switch (priority?.toUpperCase()) {
+      case 'CRITICAL': return '🔴';
+      case 'HIGH': return '🟠';
+      case 'MEDIUM': return '🟡';
+      case 'LOW': return '🟢';
+      default: return '⚪';
+    }
+  };
+
+  return (
+    <div className="backlog-tab">
+      <div className="backlog-header">
+        <h3>Product Backlog</h3>
+        {!sprintId && (
+          <div className="no-sprint-notice">
+            <span className="notice-icon">⚠️</span>
+            <span>No active sprint. Start a sprint to move items.</span>
+          </div>
+        )}
+      </div>
+
+      {actionError && (
+        <div className="action-message error-message">
+          <span className="message-icon">❌</span>
+          {actionError}
+        </div>
+      )}
+
+      {actionOk && (
+        <div className="action-message success-message">
+          <span className="message-icon">✅</span>
+          {actionOk}
+        </div>
+      )}
+
+      <div className="backlog-table-container">
+        <table className="backlog-table">
+          <thead>
+            <tr>
+              <th>Issue</th>
+              <th>Priority</th>
+              <th>Assignee</th>
+              <th>Status</th>
+              <th>Due</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr>
+                <td colSpan="6" className="loading-cell">
+                  <div className="loading-content">
+                    <div className="loading-spinner"></div>
+                    <span>Loading backlog…</span>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!loading && items.length === 0 && (
+              <tr>
+                <td colSpan="6" className="empty-cell">
+                  <div className="empty-content">
+                    <span className="empty-icon">📝</span>
+                    <span>No backlog items</span>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!loading && items.map(t => (
+              <tr 
+                key={t.id} 
+                className={`backlog-row ${movingId === t.id ? 'moving' : ''}`}
                 onClick={(e) => openTaskModal(t, e)}
               >
-                <td>{t.title}</td>
-                <td>{t.priority || 'MEDIUM'}</td>
-                <td>{t.assignee_name || 'Unassigned'}</td>
-                <td>{t.status}</td>
-                <td>{t.due_date || '-'}</td>
-                <td style={{ display: 'flex', gap: 8 }}>
+                <td className="issue-cell">
+                  <div className="issue-content">
+                    <span className="issue-title">{t.title}</span>
+                    <button 
+                      className="external-link-btn"
+                      onClick={(e) => openPageNewTab(t, e)}
+                      title="Open in new tab"
+                    >
+                      ↗
+                    </button>
+                  </div>
+                </td>
+                
+                <td className="priority-cell">
+                  <div 
+                    className="priority-badge"
+                    style={{ 
+                      color: getPriorityColor(t.priority),
+                      borderColor: getPriorityColor(t.priority) 
+                    }}
+                  >
+                    <span className="priority-icon">{getPriorityIcon(t.priority)}</span>
+                    <span className="priority-text">{t.priority || 'MEDIUM'}</span>
+                  </div>
+                </td>
+                
+                <td className="assignee-cell">
+                  <div className="assignee-content">
+                    <span className="assignee-avatar">👤</span>
+                    <span className="assignee-name">{t.assignee_name || 'Unassigned'}</span>
+                  </div>
+                </td>
+                
+                <td className="status-cell">
+                  <span className="status-badge">{t.status}</span>
+                </td>
+                
+                <td className="due-cell">
+                  <span className="due-date">{t.due_date || '-'}</span>
+                </td>
+                
+                <td className="actions-cell">
                   <button
-                    className="btn-jira btn-sm"
+                    className={`add-to-sprint-btn ${!sprintId ? 'disabled' : ''} ${movingId === t.id ? 'loading' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToSprint(t.id);
+                    }}
                     disabled={!sprintId || movingId === t.id}
-                    onClick={(e) => { e.stopPropagation(); addToSprint(t.id); }}
+                    title={!sprintId ? 'No active sprint' : 'Add to current sprint'}
                   >
-                    {movingId === t.id ? 'Adding…' : 'Add to sprint'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-jira"
-                    title="Open as page"
-                    onClick={(e) => openPageNewTab(t, e)}
-                  >
-                    ↗
+                    {movingId === t.id ? (
+                      <>
+                        <div className="btn-spinner"></div>
+                        <span>Adding...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="btn-icon">➕</span>
+                        <span className="btn-text">Add to Sprint</span>
+                      </>
+                    )}
                   </button>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      {openTaskId ? (
+      {openTaskId && (
         <IssueDetailsModal
-          projectId={projectId}
           taskId={openTaskId}
+          projectId={projectId}
           onClose={() => setOpenTaskId('')}
-          onOpenAsPage={() => {
-            const absolute = `${window.location.origin}/projects/${projectId}/tasks/${openTaskId}`;
-            window.open(absolute, '_blank', 'noopener,noreferrer');
-          }}
+          onChanged={load}
         />
-      ) : null}
+      )}
     </div>
   );
 };

@@ -1,255 +1,286 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axiosInstance from '../../services/axiosinstance';
-import { useNavigate, useParams } from 'react-router-dom';
 import IssueDetailsModal from './IssueDetailsModal';
 
 const STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'BLOCKED'];
 
 const Card = ({ t, onDragStart, onOpenModal, projectId }) => {
   const openPageNewTab = (e) => {
-    e.stopPropagation(); // prevent modal open
-    e.preventDefault();  // avoid SPA interception
+    e.stopPropagation();
+    e.preventDefault();
     const absolute = `${window.location.origin}/projects/${projectId}/tasks/${t.id}`;
     window.open(absolute, '_blank', 'noopener,noreferrer');
   };
 
+  const getPriorityColor = (priority) => {
+    switch (priority?.toUpperCase()) {
+      case 'CRITICAL': return '#d32f2f';
+      case 'HIGH': return '#f57c00';
+      case 'MEDIUM': return '#1976d2';
+      case 'LOW': return '#388e3c';
+      default: return '#757575';
+    }
+  };
+
+  const getPriorityIcon = (priority) => {
+    switch (priority?.toUpperCase()) {
+      case 'CRITICAL': return '🔴';
+      case 'HIGH': return '🟠';
+      case 'MEDIUM': return '🟡';
+      case 'LOW': return '🟢';
+      default: return '⚪';
+    }
+  };
+
   return (
     <div
-      className="card"
+      className="kanban-card"
       draggable
-      onDragStart={onDragStart}
-      onClick={onOpenModal}
-      style={{
-        padding: 12,
-        borderRadius: 8,
-        cursor: 'pointer',
-        background: '#fff',
-        border: '1px solid var(--jira-divider)',
-      }}
+      onDragStart={(e) => onDragStart(e, t)}
+      onClick={() => onOpenModal(t)}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <div style={{ fontWeight: 600 }}>{t.title}</div>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-jira"
-          title="Open as page"
+      <div className="card-header">
+        <div className="card-priority">
+          <span 
+            className="priority-icon"
+            style={{ color: getPriorityColor(t.priority) }}
+          >
+            {getPriorityIcon(t.priority)}
+          </span>
+          <span className="card-id">#{t.id?.slice(-6)}</span>
+        </div>
+        <button 
+          className="external-link-btn"
           onClick={openPageNewTab}
+          title="Open in new tab"
         >
           ↗
         </button>
       </div>
-
-      {t.description ? (
-        <div
-          className="jira-muted"
-          style={{
-            fontSize: 12,
-            marginTop: 4,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-          }}
-        >
-          {t.description}
+      
+      <div className="card-content">
+        <h4 className="card-title">{t.title}</h4>
+        {t.description && (
+          <p className="card-description">{t.description}</p>
+        )}
+      </div>
+      
+      <div className="card-footer">
+        <div className="assignee-info">
+          <span className="assignee-avatar">👤</span>
+          <span className="assignee-name">{t.assignee_name || 'Unassigned'}</span>
         </div>
-      ) : null}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <span className="status-badge" style={{ background: '#F3F4F6', padding: '2px 8px', borderRadius: 12 }}>
-          {t.priority || 'MEDIUM'}
-        </span>
-        <span className="status-badge" style={{ background: '#EFF6FF', padding: '2px 8px', borderRadius: 12 }}>
-          {t.assignee_name || 'Unassigned'}
-        </span>
+        {t.story_points && (
+          <div className="story-points">
+            <span className="points-badge">{t.story_points}sp</span>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-const Column = ({ title, tasks, onDropStatus, onOpenModal, projectId }) => (
-  <div
-    className="jira-card"
-    style={{ minHeight: 480, padding: 8, borderRadius: 8, background: '#fff' }}
-    onDragOver={(e) => e.preventDefault()}
-    onDrop={(e) => {
-      const taskId = e.dataTransfer.getData('text/task-id');
-      const from = e.dataTransfer.getData('text/from');
-      if (taskId) onDropStatus(taskId, from);
-    }}
-  >
-    <div className="section-header" style={{ borderBottom: '1px solid var(--jira-divider)' }}>
-      <h3 style={{ fontSize: 14, margin: 0 }}>{title}</h3>
-      <div className="jira-muted">{tasks.length}</div>
+const Column = ({ status, tasks, onDrop, onDragOver, onOpenModal, projectId }) => {
+  const getColumnConfig = (status) => {
+    const configs = {
+      'TODO': { title: 'To Do', color: '#757575', icon: '📝', bg: '#fafafa' },
+      'IN_PROGRESS': { title: 'In Progress', color: '#1976d2', icon: '⚡', bg: '#e3f2fd' },
+      'IN_REVIEW': { title: 'In Review', color: '#f57c00', icon: '👀', bg: '#fff3e0' },
+      'DONE': { title: 'Done', color: '#388e3c', icon: '✅', bg: '#e8f5e8' },
+      'BLOCKED': { title: 'Blocked', color: '#d32f2f', icon: '🚫', bg: '#ffebee' }
+    };
+    return configs[status] || configs['TODO'];
+  };
+
+  const config = getColumnConfig(status);
+  
+  return (
+    <div 
+      className="kanban-column"
+      style={{ backgroundColor: config.bg }}
+      onDrop={(e) => onDrop(e, status)}
+      onDragOver={onDragOver}
+    >
+      <div 
+        className="column-header"
+        style={{ borderBottomColor: config.color }}
+      >
+        <div className="column-title-section">
+          <span className="column-icon">{config.icon}</span>
+          <h3 className="column-title" style={{ color: config.color }}>
+            {config.title}
+          </h3>
+        </div>
+        <div className="task-count-badge" style={{ backgroundColor: config.color }}>
+          {tasks.length}
+        </div>
+      </div>
+      
+      <div className="column-content">
+        {tasks.length === 0 ? (
+          <div className="empty-column">
+            <div className="empty-icon" style={{ color: config.color }}>
+              {config.icon}
+            </div>
+            <p className="empty-text">No tasks</p>
+          </div>
+        ) : (
+          tasks.map(task => (
+            <Card
+              key={task.id}
+              t={task}
+              onDragStart={(e, task) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify(task));
+              }}
+              onOpenModal={onOpenModal}
+              projectId={projectId}
+            />
+          ))
+        )}
+      </div>
     </div>
+  );
+};
 
-    <div style={{ padding: 8, display: 'grid', gap: 8 }}>
-      {tasks.length === 0 ? (
-        <div className="jira-muted">No items</div>
-      ) : (
-        tasks.map((t) => (
-          <Card
-            key={t.id}
-            t={t}
-            projectId={projectId}
-            onDragStart={(e) => {
-              e.dataTransfer.setData('text/task-id', t.id);
-              e.dataTransfer.setData('text/from', 'board');
-            }}
-            onOpenModal={(e) => onOpenModal(t, e)}
-          />
-        ))
-      )}
-    </div>
-  </div>
-);
-
-const BoardTab = ({ reloadKey }) => {
-  const navigate = useNavigate();
-  const { projectId: projectIdFromUrl } = useParams();
-
-  const projectId = projectIdFromUrl || '';
-  const [currentSprint, setCurrentSprint] = useState(null);
+const BoardTab = ({ projectId, sprintId, onTaskUpdated, reloadKey }) => {
+  // Removed unused imports: useParams, useNavigate
+  // Removed unused state: draggedTask, setDraggedTask
   const [tasks, setTasks] = useState([]);
-  const [loadingSprint, setLoadingSprint] = useState(true);
-  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [openTaskId, setOpenTaskId] = useState('');
-  const [actionError, setActionError] = useState('');
 
-  const loadCurrentSprint = useCallback(async () => {
-    setLoadingSprint(true);
-    setActionError('');
-    try {
-      const res = await axiosInstance.post('/projects/sprints/current/', { project_id: projectId });
-      setCurrentSprint(res?.data?.records || null);
-    } catch (e) {
-      setCurrentSprint(null);
-      setActionError(e?.response?.data?.message || 'Failed to load current sprint');
-    } finally {
-      setLoadingSprint(false);
-    }
-  }, [projectId]);
-
-  const loadSprintTasks = useCallback(async () => {
-    if (!currentSprint?.id) {
+  const loadTasks = useCallback(async () => {
+    if (!sprintId) {
       setTasks([]);
+      setLoading(false);
       return;
     }
-    setLoadingTasks(true);
-    setActionError('');
+    
     try {
-      const res = await axiosInstance.post('/projects/sprints/tasks/', { sprint_id: currentSprint.id });
+      setLoading(true);
+      const res = await axiosInstance.post('/projects/sprints/tasks/', {
+        sprint_id: sprintId,
+        page_size: 100
+      });
       setTasks(res?.data?.status ? (res?.data?.records || []) : []);
-    } catch (e) {
+    } catch (error) {
+      console.error('Failed to load sprint tasks:', error);
       setTasks([]);
-      setActionError(e?.response?.data?.message || 'Failed to load sprint tasks');
     } finally {
-      setLoadingTasks(false);
+      setLoading(false);
     }
-  }, [currentSprint?.id]);
+  }, [sprintId]);
 
   useEffect(() => {
-    if (!projectId) return;
-    loadCurrentSprint();
-  }, [projectId, loadCurrentSprint, reloadKey]);
+    loadTasks();
+  }, [loadTasks, reloadKey]);
 
-  useEffect(() => {
-    if (!currentSprint?.id) return;
-    loadSprintTasks();
-  }, [currentSprint?.id, loadSprintTasks]);
-
-  const grouped = useMemo(() => {
-    const map = {};
-    STATUSES.forEach((s) => (map[s] = []));
-    tasks.forEach((t) => {
-      if (!map[t.status]) map[t.status] = [];
-      map[t.status].push(t);
-    });
-    return map;
+  const tasksByStatus = useMemo(() => {
+    return STATUSES.reduce((acc, status) => {
+      acc[status] = tasks.filter(task => task.status === status);
+      return acc;
+    }, {});
   }, [tasks]);
 
-  const moveTask = useCallback(
-    async (taskId, newStatus, from) => {
-      try {
-        const body =
-          from === 'backlog'
-            ? { id: taskId, status: newStatus, sprint_id: currentSprint?.id || null }
-            : { id: taskId, status: newStatus };
-        const res = await axiosInstance.put('/projects/task/move/', body);
-        if (!res?.data?.status) {
-          setActionError(res?.data?.message || 'Failed to move task');
-          return;
-        }
-        await loadSprintTasks();
-      } catch (e) {
-        setActionError(e?.response?.data?.message || 'Failed to move task');
-      }
-    },
-    [currentSprint?.id, loadSprintTasks]
-  );
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
 
-  // Normal click -> modal; Shift+Click -> open page in same tab
-  const onOpenModal = useCallback(
-    (t, evt) => {
-      if (evt?.shiftKey) {
-        navigate(`/projects/${projectId}/tasks/${t.id}`);
-        return;
-      }
-      setOpenTaskId(t.id);
-    },
-    [navigate, projectId]
-  );
+  const handleDrop = async (e, newStatus) => {
+    e.preventDefault();
+    try {
+      const taskData = JSON.parse(e.dataTransfer.getData('text/plain'));
+      if (taskData.status === newStatus) return;
 
-  if (!projectId) return <div className="jira-muted">No project selected.</div>;
-  if (loadingSprint) return <div>Loading sprint…</div>;
-  if (!currentSprint?.id) return <div className="jira-muted">No active or planned sprint selected for this project.</div>;
+      await axiosInstance.put('/projects/task/move/', {
+        id: taskData.id,
+        status: newStatus,
+        sprint_id: sprintId
+      });
+
+      await loadTasks();
+      onTaskUpdated?.();
+    } catch (error) {
+      console.error('Failed to move task:', error);
+    }
+  };
+
+  const openTaskModal = (task) => {
+    setOpenTaskId(task.id);
+  };
+
+  if (loading) {
+    return (
+      <div className="board-loading">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <span>Loading sprint board...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!sprintId) {
+    return (
+      <div className="no-sprint-board">
+        <div className="no-sprint-content">
+          <div className="no-sprint-icon">🚀</div>
+          <h3>No Active Sprint</h3>
+          <p>Start a sprint to see your board with tasks organized by status.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {actionError ? (
-        <div className="alert alert-danger" style={{ marginBottom: 12 }}>{actionError}</div>
-      ) : null}
-
-      <div className="jira-card" style={{ marginBottom: 12 }}>
-        <div className="section-header" style={{ borderBottom: '1px solid var(--jira-divider)' }}>
-          <h3 style={{ margin: 0 }}>{currentSprint?.name || 'Current Sprint'}</h3>
-          <div className="jira-muted">
-            {currentSprint?.status || ''} {currentSprint?.start_date ? `• ${currentSprint.start_date}` : ''}{' '}
-            {currentSprint?.end_date ? `→ ${currentSprint.end_date}` : ''}
+    <div className="board-tab">
+      <div className="board-header">
+        <div className="board-stats">
+          <div className="stat-item">
+            <span className="stat-number">{tasks.length}</span>
+            <span className="stat-label">Total Tasks</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{tasksByStatus.DONE?.length || 0}</span>
+            <span className="stat-label">Completed</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{tasksByStatus.IN_PROGRESS?.length || 0}</span>
+            <span className="stat-label">In Progress</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{tasksByStatus.TODO?.length || 0}</span>
+            <span className="stat-label">To Do</span>
           </div>
         </div>
       </div>
 
-      {loadingTasks ? (
-        <div>Loading board…</div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-          {STATUSES.map((s) => (
-            <Column
-              key={s}
-              title={s.replace('_', ' ')}
-              tasks={grouped[s] || []}
-              onDropStatus={(taskId, from) => moveTask(taskId, s, from)}
-              onOpenModal={onOpenModal}
-              projectId={projectId}
-            />
-          ))}
-        </div>
-      )}
+      <div className="kanban-board">
+        {STATUSES.map(status => (
+          <Column
+            key={status}
+            status={status}
+            tasks={tasksByStatus[status] || []}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onOpenModal={openTaskModal}
+            projectId={projectId}
+          />
+        ))}
+      </div>
 
-      {openTaskId ? (
+      {openTaskId && (
         <IssueDetailsModal
-          projectId={projectId}
           taskId={openTaskId}
+          projectId={projectId}
           onClose={() => setOpenTaskId('')}
-          onOpenAsPage={() => {
-            const absolute = `${window.location.origin}/projects/${projectId}/tasks/${openTaskId}`;
-            window.open(absolute, '_blank', 'noopener,noreferrer');
+          onChanged={() => {
+            loadTasks();
+            onTaskUpdated?.();
           }}
         />
-      ) : null}
-    </>
+      )}
+    </div>
   );
 };
 
