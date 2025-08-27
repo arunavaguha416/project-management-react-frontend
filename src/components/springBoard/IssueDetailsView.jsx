@@ -2,281 +2,435 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import axiosInstance from '../../services/axiosinstance';
 import DetailsSidebar from "./DetailsSidebar";
 import Toolbar from "./Toolbar";
+import CommentsSection from "./CommentsSection";
+import '../../assets/css/IssueDetails.css';
 
-
-
-
-
-
-const IssueDetailsView = ({
-  projectId,
-  taskId,
-  onClose,
-  onOpenAsPage,
-  onChanged = () => {},       // safe default to avoid “not defined”
-  allowClose = true,
+const IssueDetailsView = ({ 
+  projectId, 
+  taskId, 
+  onClose, 
+  onOpenAsPage, 
+  onChanged = () => {}, 
+  allowClose = true 
 }) => {
-  // Top-level hooks only
+  // State management
   const [loading, setLoading] = useState(true);
   const [rootError, setRootError] = useState('');
+  const [saving, setSaving] = useState(false);
+  
+  // Issue data
+  const [issueData, setIssueData] = useState({
+    key: '',
+    title: '',
+    description: '',
+    status: 'TODO',
+    priority: 'MEDIUM',
+    type: 'TASK',
+    assignee: '',
+    reporter: '',
+    sprint: '',
+    labels: '',
+    dueDate: '',
+    createdAt: '',
+    updatedAt: '',
+    storyPoints: '',
+    originalEstimate: '',
+    timeTracked: '',
+    parentEpic: '',
+    fixVersions: ''
+  });
 
-  const [issueKey, setIssueKey] = useState('');
-  const [title, setTitle] = useState('');
-  const [titleOriginal, setTitleOriginal] = useState('');
-  const [desc, setDesc] = useState('');
-  const [descOriginal, setDescOriginal] = useState('');
-  const [editDetails, setEditDetails] = useState(false);
-
-  const [statusValue, setStatusValue] = useState('TODO');
-  const [statusOriginal, setStatusOriginal] = useState('TODO');
-
-  const [sprintId, setSprintId] = useState('');
-  const [sprintOriginal, setSprintOriginal] = useState('');
-
-  const [assignee, setAssignee] = useState('');
-  const [assigneeOriginal, setAssigneeOriginal] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [dueOriginal, setDueOriginal] = useState('');
-
-  const [labels, setLabels] = useState('');
-  const [labelsOriginal, setLabelsOriginal] = useState('');
-  const [parent, setParent] = useState('');
-  const [team, setTeam] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [originalEstimate, setOriginalEstimate] = useState('');
-  const [timeTracked, setTimeTracked] = useState('');
-  const [fixVersions, setFixVersions] = useState('');
-
+  // Original values for dirty checking
+  const [originalData, setOriginalData] = useState({});
+  
+  // Edit states
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [activeTab, setActiveTab] = useState('activity');
+  
+  // Options data
   const [users, setUsers] = useState([]);
   const [sprints, setSprints] = useState([]);
 
-  const [savingSide, setSavingSide] = useState(false);
-  const [errorSide, setErrorSide] = useState('');
+  // Check if data is dirty
+  const isDirty = useMemo(() => {
+    return Object.keys(issueData).some(key => 
+      issueData[key] !== originalData[key]
+    );
+  }, [issueData, originalData]);
 
-  // Dirtiness
-  const detailsDirty = useMemo(
-    () => title !== titleOriginal || desc !== descOriginal,
-    [title, titleOriginal, desc, descOriginal]
-  );
-
-  const sidebarDirty = useMemo(() => (
-    (assignee || '') !== (assigneeOriginal || '') ||
-    (sprintId || '') !== (sprintOriginal || '') ||
-    (labels || '') !== (labelsOriginal || '') ||
-    (dueDate || '') !== (dueOriginal || '') ||
-    statusValue !== statusOriginal
-  ), [
-    assignee, assigneeOriginal,
-    sprintId, sprintOriginal,
-    labels, labelsOriginal,
-    dueDate, dueOriginal,
-    statusValue, statusOriginal
-  ]);
-
-  // Data loaders
+  // Load supporting data
   const loadUsers = useCallback(async () => {
     try {
       const res = await axiosInstance.get('/users/list/');
-      const data = Array.isArray(res?.data?.records) ? res.data.records : (res?.data || []);
-      const mapped = data
-        .map(u => ({ id: u.id || u.user_id || u.pk, name: u.name || u.username || u.email }))
-        .filter(u => u.id && u.name);
-      setUsers(mapped);
-    } catch {
-      setUsers([]);
+      const data = Array.isArray(res?.data?.records) ? res.data.records : [];
+      setUsers(data.map(u => ({
+        id: u.id || u.user_id,
+        name: u.name || u.username || u.email,
+        email: u.email
+      })).filter(u => u.id && u.name));
+    } catch (error) {
+      console.error('Failed to load users:', error);
     }
   }, []);
 
   const loadSprints = useCallback(async () => {
     try {
-      const res = await axiosInstance.post('/projects/sprints/list/', { project_id: projectId, page_size: 100 });
+      const res = await axiosInstance.post('/projects/sprints/list/', {
+        project_id: projectId,
+        page_size: 100
+      });
       const list = res?.data?.records || [];
-      setSprints(list.map(s => ({ id: s.id, name: s.name, status: s.status })));
-    } catch {
-      setSprints([]);
+      setSprints(list.map(s => ({
+        id: s.id,
+        name: s.name,
+        status: s.status
+      })));
+    } catch (error) {
+      console.error('Failed to load sprints:', error);
     }
   }, [projectId]);
 
-  const loadTask = useCallback(async () => {
-    setRootError('');
+  // Load issue data
+  const loadIssue = useCallback(async () => {
+    if (!taskId) return;
+    
     setLoading(true);
+    setRootError('');
+    
     try {
-      // API: POST /projects/task/details/ => { status, records: {...} }
-      const res = await axiosInstance.post('/projects/task/details/', { id: taskId, project_id: projectId });
+      const res = await axiosInstance.post('/projects/task/details/', {
+        id: taskId,
+        project_id: projectId
+      });
+      
       if (!res?.data?.status || !res?.data?.records) {
-        setRootError(res?.data?.message || 'Unable to load task');
-        setLoading(false);
+        setRootError(res?.data?.message || 'Failed to load issue');
         return;
       }
-      const t = res.data.records;
-
-      setIssueKey(t.key || t.code || '');
-      setTitle(t.title || ''); setTitleOriginal(t.title || '');
-      setDesc(t.description || ''); setDescOriginal(t.description || '');
-
-      const st = t.status || 'TODO';
-      setStatusValue(st); setStatusOriginal(st);
-
-      const sp = t.sprint_id || '';
-      setSprintId(sp); setSprintOriginal(sp);
-
-      const asg = t.assigned_to || '';
-      setAssignee(asg); setAssigneeOriginal(asg);
-
-      const due = t.due_date || '';
-      setDueDate(due); setDueOriginal(due);
-
-      const lbls = Array.isArray(t.labels) ? t.labels.join(', ') : (t.labels || '');
-      setLabels(lbls); setLabelsOriginal(lbls);
-
-      // optional/info mapping
-      setTeam(t.team || '');
-      setStartDate(t.start_date || '');
-      setOriginalEstimate(t.original_estimate || '');
-      setTimeTracked(t.time_logged || '');
-      setFixVersions(Array.isArray(t.fix_versions) ? t.fix_versions.join(', ') : (t.fix_versions || ''));
-    } catch {
-      setRootError('Failed to load task');
+      
+      const task = res.data.records;
+      const data = {
+        key: task.key || task.code || `TASK-${taskId}`,
+        title: task.title || '',
+        description: task.description || '',
+        status: task.status || 'TODO',
+        priority: task.priority || 'MEDIUM',
+        type: task.type || 'TASK',
+        assignee: task.assigned_to || '',
+        reporter: task.reporter || task.created_by || '',
+        sprint: task.sprint_id || '',
+        labels: Array.isArray(task.labels) ? task.labels.join(', ') : (task.labels || ''),
+        dueDate: task.due_date || '',
+        createdAt: task.created_at || '',
+        updatedAt: task.updated_at || '',
+        storyPoints: task.story_points || '',
+        originalEstimate: task.original_estimate || '',
+        timeTracked: task.time_logged || '',
+        parentEpic: task.epic || '',
+        fixVersions: Array.isArray(task.fix_versions) ? task.fix_versions.join(', ') : (task.fix_versions || '')
+      };
+      
+      setIssueData(data);
+      setOriginalData({ ...data });
+      
+    } catch (error) {
+      setRootError('Failed to load issue details');
+      console.error('Error loading issue:', error);
     } finally {
       setLoading(false);
     }
   }, [taskId, projectId]);
 
-  // Effects
-  useEffect(() => { loadUsers(); loadSprints(); }, [loadUsers, loadSprints]);
-  useEffect(() => { if (taskId) loadTask(); }, [loadTask, taskId]);
+  // Initialize data
+  useEffect(() => {
+    Promise.all([loadUsers(), loadSprints(), loadIssue()]);
+  }, [loadUsers, loadSprints, loadIssue]);
 
-  // Saves
-  const saveTitleDesc = useCallback(async () => {
-    if (!detailsDirty) return;
-    await axiosInstance.put('/projects/task/update/details/', { id: taskId, title, description: desc });
-    setTitleOriginal(title);
-    setDescOriginal(desc);
-    setEditDetails(false);
-  }, [detailsDirty, taskId, title, desc]);
-
-  const saveSidebar = useCallback(async () => {
-    if (!sidebarDirty) return;
-    setErrorSide('');
-    setSavingSide(true);
+  // Save changes
+  const saveChanges = useCallback(async () => {
+    if (!isDirty) return;
+    
+    setSaving(true);
     try {
+      // Save title and description
+      await axiosInstance.put('/projects/task/update/details/', {
+        id: taskId,
+        title: issueData.title,
+        description: issueData.description
+      });
+
+      // Save assignment and classification
       await axiosInstance.put('/projects/task/update/assignment/', {
         id: taskId,
-        assigned_to: assignee || null,
-        due_date: dueDate || null
+        assigned_to: issueData.assignee || null,
+        due_date: issueData.dueDate || null
       });
 
+      // Save labels and other fields
       await axiosInstance.put('/projects/task/update/classification/', {
         id: taskId,
-        epic: parent || null,
-        labels: labels ? labels.split(',').map(s => s.trim()).filter(Boolean) : []
+        epic: issueData.parentEpic || null,
+        labels: issueData.labels ? issueData.labels.split(',').map(s => s.trim()).filter(Boolean) : []
       });
 
-      await axiosInstance.put('/projects/task/move/', {
-        id: taskId,
-        status: statusValue,
-        sprint_id: sprintId || null
-      });
+      // Move to new status/sprint if changed
+      if (issueData.status !== originalData.status || issueData.sprint !== originalData.sprint) {
+        await axiosInstance.put('/projects/task/move/', {
+          id: taskId,
+          status: issueData.status,
+          sprint_id: issueData.sprint || null
+        });
+      }
 
-      setAssigneeOriginal(assignee || '');
-      setDueOriginal(dueDate || '');
-      setLabelsOriginal(labels || '');
-      setSprintOriginal(sprintId || '');
-      setStatusOriginal(statusValue);
-    } catch (e) {
-      setErrorSide(e?.response?.data?.message || 'Failed to save');
+      setOriginalData({ ...issueData });
+      onChanged();
+      
+    } catch (error) {
+      console.error('Failed to save changes:', error);
+      setRootError('Failed to save changes');
     } finally {
-      setSavingSide(false);
+      setSaving(false);
     }
-  }, [sidebarDirty, taskId, assignee, dueDate, labels, sprintId, statusValue, parent]);
+  }, [isDirty, taskId, issueData, originalData, onChanged]);
 
-  const handleSaveAll = useCallback(async () => {
-    await saveTitleDesc();
-    await saveSidebar();
-    if (detailsDirty || sidebarDirty) {
-      onChanged();         // safe due to default no-op
-      await loadTask();    // refresh derived fields
+  // Handle field changes
+  const updateField = useCallback((field, value) => {
+    setIssueData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Get user display name
+  const getUserName = useCallback((userId) => {
+    const user = users.find(u => u.id === userId);
+    return user ? user.name : 'Unassigned';
+  }, [users]);
+
+  // Get sprint display name
+  const getSprintName = useCallback((sprintId) => {
+    const sprint = sprints.find(s => s.id === sprintId);
+    return sprint ? sprint.name : 'No Sprint';
+  }, [sprints]);
+
+  // Format date
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return 'Not set';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
     }
-  }, [saveTitleDesc, saveSidebar, detailsDirty, sidebarDirty, onChanged, loadTask]);
+  }, []);
 
-  // Open page handler (used by Toolbar)
-  const openAsPage = useCallback(() => {
-    const absolute = `${window.location.origin}/projects/${projectId}/tasks/${taskId}`;
-    window.open(absolute, '_blank', 'noopener,noreferrer');
-  }, [projectId, taskId]);
+  if (loading) {
+    return (
+      <div className="issue-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading issue details...</p>
+      </div>
+    );
+  }
+
+  if (rootError) {
+    return (
+      <div className="issue-error">
+        <div className="error-icon">⚠️</div>
+        <h3>Failed to Load Issue</h3>
+        <p>{rootError}</p>
+        <button className="btn-retry" onClick={loadIssue}>
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+    <div className="issue-details-container">
+      {/* Header */}
       <div className="issue-header">
         <div className="issue-header-left">
-          <span className="issue-key">{issueKey || 'ISSUE'}</span>
-          <div
-            className="issue-title"
-            onDoubleClick={()=>setEditDetails(true)}
-            title="Double-click to edit"
-          >
-            {title || 'Untitled issue'}
+          <span className="issue-key">{issueData.key}</span>
+          <div className="issue-type-priority">
+            <span className={`type-badge type-${issueData.type.toLowerCase()}`}>
+              {issueData.type}
+            </span>
+            <span className={`priority-badge priority-${issueData.priority.toLowerCase()}`}>
+              {issueData.priority}
+            </span>
           </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        
+        <div className="issue-header-right">
           <Toolbar
-            onOpenVSCode={() => {}}
-            onCreateBranch={() => {}}
-            onCreateCommit={() => {}}
-            // If parent passes onOpenAsPage, use it; otherwise use local openAsPage
-            onOpenAsPage={onOpenAsPage || openAsPage}
-            />
-          {allowClose && <button className="icon-btn" onClick={onClose}>✕</button>}
+            onSave={saveChanges}
+            onOpenAsPage={onOpenAsPage}
+            onClose={allowClose ? onClose : null}
+            isDirty={isDirty}
+            saving={saving}
+          />
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ padding:16 }}>Loading issue…</div>
-      ) : rootError ? (
-        <div className="alert alert-danger" style={{ margin:16 }}>{rootError}</div>
-      ) : (
-        <div className="issue-body" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, padding: 16 }}>
-          <div className="panel">
-            <div className="panel-section">
-              <div className="section-title">Description</div>
-              {editDetails ? (
-                <div style={{ display: 'grid', gap: 8 }}>
-                  <textarea className="form-control" rows={6} value={desc} onChange={(e)=>setDesc(e.target.value)} />
-                  <div className="row-muted">Double-click title/description to edit; Save in the Details section.</div>
-                </div>
-              ) : (
-                <div
-                  style={{ whiteSpace: 'pre-wrap', cursor: 'text', minHeight: 24 }}
-                  onDoubleClick={()=>setEditDetails(true)}
-                  title="Double-click to edit"
+      {/* Main Content */}
+      <div className="issue-body">
+        {/* Left Column - Details */}
+        <div className="issue-main-content">
+          {/* Title Section */}
+          <div className="content-section">
+            <div className="section-header">
+              <h2>Summary</h2>
+              <button 
+                className="edit-btn"
+                onClick={() => setEditingTitle(!editingTitle)}
+              >
+                {editingTitle ? '✓' : '✏️'}
+              </button>
+            </div>
+            
+            {editingTitle ? (
+              <input
+                type="text"
+                value={issueData.title}
+                onChange={(e) => updateField('title', e.target.value)}
+                onBlur={() => setEditingTitle(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setEditingTitle(false);
+                  if (e.key === 'Escape') {
+                    updateField('title', originalData.title);
+                    setEditingTitle(false);
+                  }
+                }}
+                className="title-input"
+                autoFocus
+              />
+            ) : (
+              <h1 
+                className="issue-title"
+                onClick={() => setEditingTitle(true)}
+              >
+                {issueData.title || 'Untitled Issue'}
+              </h1>
+            )}
+          </div>
+
+          {/* Description Section */}
+          <div className="content-section">
+            <div className="section-header">
+              <h3>Description</h3>
+              <button 
+                className="edit-btn"
+                onClick={() => setEditingDescription(!editingDescription)}
+              >
+                {editingDescription ? '✓' : '✏️'}
+              </button>
+            </div>
+            
+            {editingDescription ? (
+              <textarea
+                value={issueData.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                onBlur={() => setEditingDescription(false)}
+                className="description-textarea"
+                rows="6"
+                placeholder="Add a description..."
+                autoFocus
+              />
+            ) : (
+              <div 
+                className="description-content"
+                onClick={() => setEditingDescription(true)}
+              >
+                {issueData.description || (
+                  <span className="placeholder">Click to add description...</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Activity Section */}
+          <div className="content-section">
+            <div className="activity-header">
+              <h3>Activity</h3>
+              <div className="activity-tabs">
+                <button 
+                  className={`tab-btn ${activeTab === 'activity' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('activity')}
                 >
-                  {desc || <span className="row-muted">Add a description…</span>}
+                  All
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'comments' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('comments')}
+                >
+                  Comments
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('history')}
+                >
+                  History
+                </button>
+              </div>
+            </div>
+            
+            <div className="activity-content">
+              {activeTab === 'comments' && (
+                <CommentsSection 
+                  taskId={taskId} 
+                  sprintId={issueData.sprint}
+                />
+              )}
+              {activeTab === 'activity' && (
+                <div className="activity-feed">
+                  <div className="activity-item">
+                    <div className="activity-avatar">👤</div>
+                    <div className="activity-details">
+                      <div className="activity-summary">
+                        <strong>{getUserName(issueData.reporter)}</strong> created this issue
+                      </div>
+                      <div className="activity-time">{formatDate(issueData.createdAt)}</div>
+                    </div>
+                  </div>
+                  {issueData.updatedAt !== issueData.createdAt && (
+                    <div className="activity-item">
+                      <div className="activity-avatar">📝</div>
+                      <div className="activity-details">
+                        <div className="activity-summary">
+                          Issue was updated
+                        </div>
+                        <div className="activity-time">{formatDate(issueData.updatedAt)}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeTab === 'history' && (
+                <div className="history-placeholder">
+                  <p>Change history will appear here</p>
                 </div>
               )}
             </div>
           </div>
+        </div>
 
+        {/* Right Column - Details Sidebar */}
+        <div className="issue-sidebar">
           <DetailsSidebar
+            issueData={issueData}
             users={users}
             sprints={sprints}
-            assignee={assignee} setAssignee={setAssignee}
-            sprintId={sprintId} setSprintId={setSprintId}
-            labels={labels} setLabels={setLabels}
-            parent={parent} setParent={setParent}
-            dueDate={dueDate} setDueDate={setDueDate}
-            team={team} setTeam={setTeam}
-            startDate={startDate} setStartDate={setStartDate}
-            originalEstimate={originalEstimate} setOriginalEstimate={setOriginalEstimate}
-            timeTracked={timeTracked} setTimeTracked={setTimeTracked}
-            fixVersions={fixVersions} setFixVersions={setFixVersions}
-            statusValue={statusValue} setStatusValue={setStatusValue}
-            saving={savingSide}
-            error={errorSide}
-            onSave={handleSaveAll}
-            dirty={detailsDirty || sidebarDirty}
+            onFieldChange={updateField}
+            getUserName={getUserName}
+            getSprintName={getSprintName}
+            formatDate={formatDate}
           />
         </div>
-      )}
+      </div>
     </div>
   );
 };

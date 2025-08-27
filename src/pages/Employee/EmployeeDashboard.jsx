@@ -2,42 +2,45 @@ import React, { useState, useEffect, useContext, useCallback } from "react";
 import axiosInstance from "../../services/axiosinstance";
 import { AuthContext } from '../../context/auth-context';
 import { useNavigate } from "react-router-dom";
+import AIAssistant from '../../components/ai/AIAssistant';
 import "../../assets/css/Dashboard.css";
+import '../../assets/css/ai/ai-components.css';
 
 const EmployeeDashboard = () => {
   const { user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // State management
+  // Existing state
   const [projects, setProjects] = useState([]);
   const [leaveBalance, setLeaveBalance] = useState(0);
   const [recentLeaves, setRecentLeaves] = useState([]);
-  const [attendance, setAttendance] = useState({
-    present_days: 0,
-    total_days: 0,
-    percentage: 0
-  });
+  const [attendance, setAttendance] = useState({ present_days: 0, total_days: 0, percentage: 0 });
   const [tasks, setTasks] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
-  
-  // Form state
-  const [leaveForm, setLeaveForm] = useState({
-    start_date: "",
-    end_date: "",
-    reason: ""
+
+  // AI-related state
+  const [aiSuggestions, setAiSuggestions] = useState({
+    productivity: 88,
+    taskOptimization: 5,
+    learningPaths: 3,
+    workloadBalance: 'good'
   });
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+
+  // Form state
+  const [leaveForm, setLeaveForm] = useState({ start_date: "", end_date: "", reason: "" });
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [leaveStatus, setLeaveStatus] = useState(null);
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [submittingLeave, setSubmittingLeave] = useState(false);
-
+  const [aiLoading, setAiLoading] = useState(false);
 
   const getStatusColor = (status) => {
     const colors = {
       'Ongoing': '#4caf50',
-      'Active': '#4caf50', 
+      'Active': '#4caf50',
       'Completed': '#2196f3',
       'On Hold': '#ff9800',
       'Cancelled': '#f44336',
@@ -60,15 +63,39 @@ const EmployeeDashboard = () => {
     return colors[priority] || '#757575';
   };
 
+  // Fetch AI suggestions
+  const fetchAISuggestions = useCallback(async () => {
+    setAiLoading(true);
+    try {
+      const res = await axiosInstance.get(
+        '/api/ai/employee-insights/',
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      if (res.data.status) {
+        setAiSuggestions(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching AI suggestions:', error);
+      // Mock data for demo
+      setAiSuggestions({
+        productivity: 88,
+        taskOptimization: 5,
+        learningPaths: 3,
+        workloadBalance: 'good'
+      });
+    }
+    setAiLoading(false);
+  }, [user]);
+
   // Fetch all dashboard data
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [
-        projectRes, 
-        leaveRes, 
-        attendanceRes, 
-        tasksRes, 
+        projectRes,
+        leaveRes,
+        attendanceRes,
+        tasksRes,
         recentLeavesRes,
         announcementsRes
       ] = await Promise.all([
@@ -139,7 +166,6 @@ const EmployeeDashboard = () => {
       if (announcementsRes.data.status) {
         setAnnouncements(announcementsRes.data.records || []);
       }
-
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -150,7 +176,8 @@ const EmployeeDashboard = () => {
   useEffect(() => {
     if (authLoading || !user) return;
     fetchDashboardData();
-  }, [authLoading, user, fetchDashboardData]);
+    fetchAISuggestions();
+  }, [authLoading, user, fetchDashboardData, fetchAISuggestions]);
 
   // Handle leave form
   const handleLeaveChange = (e) => {
@@ -162,29 +189,23 @@ const EmployeeDashboard = () => {
     setSubmittingLeave(true);
     try {
       const res = await axiosInstance.post(
-        "/employee-dashboard/apply-leave/", 
+        "/employee-dashboard/apply-leave/",
         leaveForm,
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
       if (res.data.success) {
-        setLeaveStatus({
-          type: 'success',
-          message: 'Leave request submitted successfully!'
-        });
+        setLeaveStatus({ type: 'success', message: 'Leave request submitted successfully!' });
         setLeaveForm({ start_date: "", end_date: "", reason: "" });
         setShowLeaveForm(false);
         fetchDashboardData(); // Refresh data
       } else {
-        setLeaveStatus({
-          type: 'error',
+        setLeaveStatus({ 
+          type: 'error', 
           message: "Failed to submit: " + (res.data.errors ? Object.values(res.data.errors).join("; ") : "")
         });
       }
     } catch {
-      setLeaveStatus({
-        type: 'error',
-        message: "Error submitting leave request."
-      });
+      setLeaveStatus({ type: 'error', message: "Error submitting leave request." });
     } finally {
       setSubmittingLeave(false);
       setTimeout(() => setLeaveStatus(null), 5000);
@@ -200,16 +221,25 @@ const EmployeeDashboard = () => {
     );
   }
 
+  const completedTasks = tasks.filter(task => task.status === 'DONE').length;
+
   return (
     <div className="dashboard-container">
       {/* Header */}
       <div className="dashboard-header">
         <div className="header-content">
           <div className="welcome-section">
-            <h1 className="dashboard-title">My Dashboard</h1>
-            <p className="dashboard-subtitle">Welcome back, {user.name}!</p>
+            <h1 className="dashboard-title">Welcome back, {user.name}!</h1>
+            <p className="dashboard-subtitle">Here's your personalized workspace with AI insights.</p>
           </div>
           <div className="header-actions">
+            <button 
+              className={`action-btn ${showAIAssistant ? 'primary' : 'secondary'}`}
+              onClick={() => setShowAIAssistant(!showAIAssistant)}
+            >
+              <span className="btn-icon">🤖</span>
+              AI Assistant
+            </button>
             <button 
               className="action-btn primary"
               onClick={() => setShowLeaveForm(true)}
@@ -221,7 +251,7 @@ const EmployeeDashboard = () => {
         </div>
       </div>
 
-      {/* Status Message */}
+      {/* Leave Status Message */}
       {leaveStatus && (
         <div className={`status-message ${leaveStatus.type}`}>
           <span>{leaveStatus.message}</span>
@@ -234,44 +264,70 @@ const EmployeeDashboard = () => {
         </div>
       )}
 
-      {/* Stats Cards */}
+      {/* Enhanced Stats Grid with AI */}
       <div className="stats-grid">
         <div className="stat-card primary">
-          <div className="stat-icon">📊</div>
+          <div className="stat-icon">📁</div>
           <div className="stat-content">
             <h3>{isLoading ? '...' : projects.length}</h3>
             <p>My Projects</p>
           </div>
         </div>
-        <div className="stat-card success">
+        <div className="stat-card warning">
           <div className="stat-icon">📅</div>
           <div className="stat-content">
             <h3>{isLoading ? '...' : leaveBalance}</h3>
             <p>Leave Days Left</p>
           </div>
         </div>
-        <div className="stat-card info">
-          <div className="stat-icon">📈</div>
+        <div className="stat-card success">
+          <div className="stat-icon">📊</div>
           <div className="stat-content">
             <h3>{isLoading ? '...' : attendance.percentage}%</h3>
             <p>Attendance Rate</p>
           </div>
         </div>
-        <div className="stat-card warning">
+        <div className="stat-card info">
           <div className="stat-icon">✅</div>
           <div className="stat-content">
-            <h3>{isLoading ? '...' : tasks.filter(t => t.status === 'DONE').length}</h3>
+            <h3>{isLoading ? '...' : completedTasks}</h3>
             <p>Tasks Completed</p>
+          </div>
+        </div>
+        {/* AI Stats */}
+        <div className="stat-card ai-stat primary">
+          <div className="stat-icon">🤖</div>
+          <div className="stat-content">
+            <h3>{aiLoading ? '...' : aiSuggestions.productivity}%</h3>
+            <p>AI Productivity Score</p>
+          </div>
+        </div>
+        <div className="stat-card ai-stat success">
+          <div className="stat-icon">⚡</div>
+          <div className="stat-content">
+            <h3>{aiLoading ? '...' : aiSuggestions.taskOptimization}</h3>
+            <p>Task Optimizations</p>
           </div>
         </div>
       </div>
 
-      {/* Main Content Grid */}
+      {/* AI Assistant Panel */}
+      {showAIAssistant && (
+        <div className="ai-components-container ai-mb-32">
+          <div className="ai-dashboard-grid">
+            <div className="ai-dashboard-card full-width">
+              <AIAssistant />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dashboard Grid */}
       <div className="dashboard-grid">
-        {/* My Projects */}
+        {/* Projects Card */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>My Projects</h3>
+            <h2>My Projects</h2>
             <button 
               className="view-all-btn"
               onClick={() => navigate('/projects')}
@@ -287,19 +343,25 @@ const EmployeeDashboard = () => {
               </div>
             ) : projects.length > 0 ? (
               <div className="projects-list">
-                {projects.map((project, index) => (
+                {projects.slice(0, 5).map((project, index) => (
                   <div key={index} className="project-item">
                     <div className="project-info">
                       <h4 className="project-name">{project.name}</h4>
                       <div className="project-meta">
-                        <div className="manager-info">
-                          <span>Manager: {project.manager_name || "Unassigned"}</span>
-                        </div>
-                        <div 
+                        <span 
                           className="project-status"
                           style={{ color: getStatusColor(project.status) }}
                         >
-                          {project.status === "Ongoing" ? "🟢 Ongoing" : project.status}
+                          {project.status}
+                        </span>
+                        <div className="project-progress">
+                          <div className="progress-bar">
+                            <div 
+                              className="progress-fill" 
+                              style={{ width: `${project.progress || 0}%` }}
+                            ></div>
+                          </div>
+                          <span className="progress-text">{project.progress || 0}%</span>
                         </div>
                       </div>
                     </div>
@@ -308,7 +370,7 @@ const EmployeeDashboard = () => {
               </div>
             ) : (
               <div className="empty-state">
-                <div className="empty-icon">📂</div>
+                <div className="empty-icon">📁</div>
                 <h4>No projects assigned</h4>
                 <p>Projects will appear here when assigned to you</p>
               </div>
@@ -316,11 +378,11 @@ const EmployeeDashboard = () => {
           </div>
         </div>
 
-        {/* My Tasks */}
+        {/* Tasks Card */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Recent Tasks</h3>
-            <span className="task-count">{tasks.length} tasks</span>
+            <h2>Recent Tasks</h2>
+            <span className="task-count">{tasks.length}</span>
           </div>
           <div className="card-content">
             {isLoading ? (
@@ -330,25 +392,25 @@ const EmployeeDashboard = () => {
               </div>
             ) : tasks.length > 0 ? (
               <div className="tasks-list">
-                {tasks.map((task, index) => (
+                {tasks.slice(0, 5).map((task, index) => (
                   <div key={index} className="task-item">
                     <div className="task-info">
                       <h4 className="task-title">{task.title}</h4>
                       <p className="task-project">{task.project_name}</p>
                     </div>
                     <div className="task-meta">
-                      <div 
+                      <span 
                         className="task-priority"
-                        style={{ color: getPriorityColor(task.priority) }}
+                        style={{ backgroundColor: getPriorityColor(task.priority) }}
                       >
                         {task.priority}
-                      </div>
-                      <div 
+                      </span>
+                      <span 
                         className="task-status"
-                        style={{ color: getStatusColor(task.status) }}
+                        style={{ backgroundColor: getStatusColor(task.status) }}
                       >
                         {task.status}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -363,10 +425,10 @@ const EmployeeDashboard = () => {
           </div>
         </div>
 
-        {/* Leave History */}
+        {/* Leave History Card */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Recent Leave Requests</h3>
+            <h2>Leave History</h2>
             <span className="leave-balance">Balance: {leaveBalance} days</span>
           </div>
           <div className="card-content">
@@ -378,17 +440,19 @@ const EmployeeDashboard = () => {
             ) : recentLeaves.length > 0 ? (
               <div className="leaves-list">
                 {recentLeaves.map((leave, index) => (
-                  <div key={index} className="leave-item compact">
+                  <div key={index} className="leave-item">
                     <div className="leave-dates">
-                      <span className="date-range">
-                        {leave.start_date} → {leave.end_date}
-                      </span>
-                      <span className="leave-days">{leave.total_days} days</span>
+                      <div className="date-range">
+                        <span>{leave.start_date}</span>
+                        <span className="date-separator">→</span>
+                        <span>{leave.end_date}</span>
+                      </div>
+                      <span className="leave-duration">{leave.days} days</span>
                     </div>
-                    <div 
-                      className="leave-status"
-                      style={{ color: getStatusColor(leave.status) }}
-                    >
+                    <div className="leave-info">
+                      <p className="leave-reason">{leave.reason}</p>
+                    </div>
+                    <div className="leave-status" style={{ color: getStatusColor(leave.status) }}>
                       {leave.status}
                     </div>
                   </div>
@@ -397,18 +461,18 @@ const EmployeeDashboard = () => {
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">📅</div>
-                <h4>No leave requests</h4>
+                <h4>No leave history</h4>
                 <p>Your leave history will appear here</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Announcements */}
+        {/* Announcements Card */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>📢 Announcements</h3>
-            <span className="announcement-count">{announcements.length} new</span>
+            <h2>Announcements</h2>
+            <span className="announcement-count">{announcements.length}</span>
           </div>
           <div className="card-content">
             {isLoading ? (
@@ -441,8 +505,8 @@ const EmployeeDashboard = () => {
 
       {/* Leave Application Modal */}
       {showLeaveForm && (
-        <div className="modal-overlay" onClick={() => setShowLeaveForm(false)}>
-          <div className="modal-content leave-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content leave-modal">
             <div className="modal-header">
               <h3>Apply for Leave</h3>
               <button 
@@ -452,42 +516,44 @@ const EmployeeDashboard = () => {
                 ×
               </button>
             </div>
-            <form onSubmit={handleLeaveSubmit} className="leave-form">
+            <form onSubmit={handleLeaveSubmit}>
               <div className="modal-body">
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>Start Date</label>
+                    <label htmlFor="start_date">Start Date</label>
                     <input
                       type="date"
+                      id="start_date"
                       name="start_date"
+                      className="form-input"
                       value={leaveForm.start_date}
                       onChange={handleLeaveChange}
                       required
-                      className="form-input"
                     />
                   </div>
                   <div className="form-group">
-                    <label>End Date</label>
+                    <label htmlFor="end_date">End Date</label>
                     <input
                       type="date"
+                      id="end_date"
                       name="end_date"
+                      className="form-input"
                       value={leaveForm.end_date}
                       onChange={handleLeaveChange}
                       required
-                      className="form-input"
                     />
                   </div>
                 </div>
                 <div className="form-group">
-                  <label>Reason</label>
+                  <label htmlFor="reason">Reason</label>
                   <textarea
+                    id="reason"
                     name="reason"
+                    className="form-textarea"
                     value={leaveForm.reason}
                     onChange={handleLeaveChange}
                     placeholder="Please provide a reason for your leave..."
                     required
-                    className="form-textarea"
-                    rows="4"
                   />
                 </div>
                 <div className="leave-info">

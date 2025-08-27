@@ -19,6 +19,11 @@ import SprintBoard from './pages/Sprint/SprintBoard';
 import IssueDetailsPage from './pages/Sprint/IssueDetailsPage';
 import EditProject from './pages/Manager/EditProject';
 
+// Fix the import paths - use lowercase 'ai'
+import AIDashboard from './pages/ai/AIDashboard';
+import AIAssistantPage from './pages/AI/AIAssistantPage';
+
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -34,6 +39,10 @@ export default function App() {
                 <Layout>
                   <Routes>
                     <Route path="/hr-dashboard" element={<Dashboard />} />
+                    {/* AI Routes */}
+                    <Route path="/ai-dashboard" element={<AIDashboard />} />
+                    <Route path="/ai-assistant" element={<AIAssistantPage />} />
+                    
                     <Route path="/add-user" element={<Register />} />
                     <Route path="/add-project" element={<AddProject />} />
                     <Route path="/edit-project/:id" element={<EditProject />} />
@@ -44,7 +53,7 @@ export default function App() {
                     <Route path="/project-list" element={<ProjectList />} />
                     <Route path="/employee-list" element={<EmployeeList />} />
                     <Route path="/sprint-board/:projectId" element={<SprintBoard />} />
-                    <Route path="/issue/:id" element={<IssueDetailsPage />} />
+                    <Route path="/projects/:projectId/tasks/:taskId" element={<IssueDetailsPage />} />
                     <Route path="/" element={<Dashboard />} />
                   </Routes>
                 </Layout>

@@ -1,108 +1,201 @@
+import React from 'react';
 
-const STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'BLOCKED'];
-const DetailsSidebar = ({
-  users, sprints,
-  assignee, setAssignee,
-  sprintId, setSprintId,
-  labels, setLabels,
-  parent, setParent,
-  dueDate, setDueDate,
-  team, setTeam,
-  startDate, setStartDate,
-  originalEstimate, setOriginalEstimate,
-  timeTracked, setTimeTracked,
-  fixVersions, setFixVersions,
-  statusValue, setStatusValue,
-  saving, error, onSave, dirty,
-}) => (
-  <aside className="panel">
-    {error ? <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div> : null}
-    <div className="panel-section">
-      <div className="section-title">Details</div>
-      <div className="details-grid">
-        <div className="details-label">Assignee</div>
-        <div className="details-value">
-          <select className="form-control" value={assignee || ''} onChange={(e)=>setAssignee(e.target.value)}>
-            <option value="">Unassigned</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+const DetailsSidebar = ({ 
+  issueData, 
+  users, 
+  sprints, 
+  onFieldChange, 
+  getUserName, 
+  getSprintName, 
+  formatDate 
+}) => {
+  const getStatusIcon = (status) => {
+    const icons = {
+      'TODO': '⏳',
+      'IN_PROGRESS': '🔄',
+      'IN_REVIEW': '👀',
+      'DONE': '✅',
+      'BLOCKED': '🚫'
+    };
+    return icons[status] || '📋';
+  };
 
-        <div className="details-label">Sprint</div>
-        <div className="details-value">
-          <select className="form-control" value={sprintId || ''} onChange={(e)=>setSprintId(e.target.value)}>
-            <option value="">Backlog</option>
-            {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
+  const getPriorityIcon = (priority) => {
+    const icons = {
+      'HIGH': '🔴',
+      'MEDIUM': '🟡',
+      'LOW': '🟢'
+    };
+    return icons[priority] || '⚪';
+  };
 
-        <div className="details-label">Status</div>
-        <div className="details-value">
-          <select className="form-control" value={statusValue} onChange={(e)=>setStatusValue(e.target.value)}>
-            {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-          </select>
-        </div>
+  return (
+    <div className="details-sidebar">
+      {/* Status Section */}
+      <div className="sidebar-section">
+        <h4 className="section-title">Status</h4>
+        <select
+          value={issueData.status}
+          onChange={(e) => onFieldChange('status', e.target.value)}
+          className="status-select"
+        >
+          <option value="TODO">📋 To Do</option>
+          <option value="IN_PROGRESS">🔄 In Progress</option>
+          <option value="IN_REVIEW">👀 In Review</option>
+          <option value="DONE">✅ Done</option>
+          <option value="BLOCKED">🚫 Blocked</option>
+        </select>
+      </div>
 
-        <div className="details-label">Labels</div>
-        <div className="details-value">
-          <input className="form-control" value={labels} onChange={(e)=>setLabels(e.target.value)} placeholder="label-1, label-2" />
-        </div>
+      {/* Details Section */}
+      <div className="sidebar-section">
+        <h4 className="section-title">Details</h4>
+        <div className="details-grid">
+          {/* Assignee */}
+          <div className="detail-row">
+            <label className="detail-label">Assignee</label>
+            <select
+              value={issueData.assignee}
+              onChange={(e) => onFieldChange('assignee', e.target.value)}
+              className="detail-select"
+            >
+              <option value="">Unassigned</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="details-label">Parent</div>
-        <div className="details-value">
-          <input className="form-control" value={parent || ''} onChange={(e)=>setParent(e.target.value)} placeholder="Epic/Parent ID" />
-        </div>
+          {/* Reporter */}
+          <div className="detail-row">
+            <label className="detail-label">Reporter</label>
+            <div className="detail-value readonly">
+              {getUserName(issueData.reporter)}
+            </div>
+          </div>
 
-        <div className="details-label">Due date</div>
-        <div className="details-value">
-          <input type="date" className="form-control" value={dueDate || ''} onChange={(e)=>setDueDate(e.target.value)} />
-        </div>
+          {/* Priority */}
+          <div className="detail-row">
+            <label className="detail-label">Priority</label>
+            <select
+              value={issueData.priority}
+              onChange={(e) => onFieldChange('priority', e.target.value)}
+              className="detail-select"
+            >
+              <option value="HIGH">🔴 High</option>
+              <option value="MEDIUM">🟡 Medium</option>
+              <option value="LOW">🟢 Low</option>
+            </select>
+          </div>
 
-        <div className="details-label">Team</div>
-        <div className="details-value">
-          <input className="form-control" value={team || ''} onChange={(e)=>setTeam(e.target.value)} placeholder="Optional" />
-        </div>
+          {/* Sprint */}
+          <div className="detail-row">
+            <label className="detail-label">Sprint</label>
+            <select
+              value={issueData.sprint}
+              onChange={(e) => onFieldChange('sprint', e.target.value)}
+              className="detail-select"
+            >
+              <option value="">No Sprint</option>
+              {sprints.map(sprint => (
+                <option key={sprint.id} value={sprint.id}>
+                  {sprint.name} ({sprint.status})
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="details-label">Start date</div>
-        <div className="details-value">
-          <input type="date" className="form-control" value={startDate || ''} onChange={(e)=>setStartDate(e.target.value)} />
-        </div>
+          {/* Story Points */}
+          <div className="detail-row">
+            <label className="detail-label">Story Points</label>
+            <input
+              type="number"
+              value={issueData.storyPoints}
+              onChange={(e) => onFieldChange('storyPoints', e.target.value)}
+              className="detail-input"
+              min="0"
+              step="0.5"
+            />
+          </div>
 
-        <div className="details-label">Original estimate</div>
-        <div className="details-value">
-          <input className="form-control" value={originalEstimate || ''} onChange={(e)=>setOriginalEstimate(e.target.value)} placeholder="e.g., 1h 30m" />
-        </div>
+          {/* Due Date */}
+          <div className="detail-row">
+            <label className="detail-label">Due Date</label>
+            <input
+              type="date"
+              value={issueData.dueDate ? issueData.dueDate.split('T')[0] : ''}
+              onChange={(e) => onFieldChange('dueDate', e.target.value)}
+              className="detail-input"
+            />
+          </div>
 
-        <div className="details-label">Time tracking</div>
-        <div className="details-value">
-          <input className="form-control" value={timeTracked || ''} onChange={(e)=>setTimeTracked(e.target.value)} placeholder="No time logged" />
-        </div>
+          {/* Labels */}
+          <div className="detail-row full-width">
+            <label className="detail-label">Labels</label>
+            <input
+              type="text"
+              value={issueData.labels}
+              onChange={(e) => onFieldChange('labels', e.target.value)}
+              className="detail-input"
+              placeholder="Add labels (comma separated)"
+            />
+          </div>
 
-        <div className="details-label">Fix versions</div>
-        <div className="details-value">
-          <input className="form-control" value={fixVersions || ''} onChange={(e)=>setFixVersions(e.target.value)} placeholder="Optional" />
+          {/* Parent Epic */}
+          <div className="detail-row full-width">
+            <label className="detail-label">Epic Link</label>
+            <input
+              type="text"
+              value={issueData.parentEpic}
+              onChange={(e) => onFieldChange('parentEpic', e.target.value)}
+              className="detail-input"
+              placeholder="Link to epic"
+            />
+          </div>
         </div>
       </div>
-      <div className="actions-row" style={{ marginTop: 12 }}>
-        <button className="btn btn-sm btn-jira" onClick={onSave} disabled={!dirty || saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        <span className="subtle-link">Add field</span>
+
+      {/* Time Tracking Section */}
+      <div className="sidebar-section">
+        <h4 className="section-title">Time Tracking</h4>
+        <div className="time-tracking">
+          <div className="time-row">
+            <label className="time-label">Original Estimate</label>
+            <input
+              type="text"
+              value={issueData.originalEstimate}
+              onChange={(e) => onFieldChange('originalEstimate', e.target.value)}
+              className="time-input"
+              placeholder="e.g. 2h 30m"
+            />
+          </div>
+          <div className="time-row">
+            <label className="time-label">Time Logged</label>
+            <div className="time-value readonly">
+              {issueData.timeTracked || 'None'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dates Section */}
+      <div className="sidebar-section">
+        <h4 className="section-title">Dates</h4>
+        <div className="dates-info">
+          <div className="date-row">
+            <span className="date-label">Created</span>
+            <span className="date-value">{formatDate(issueData.createdAt)}</span>
+          </div>
+          <div className="date-row">
+            <span className="date-label">Updated</span>
+            <span className="date-value">{formatDate(issueData.updatedAt)}</span>
+          </div>
+        </div>
       </div>
     </div>
-
-    <div className="panel-section">
-      <div className="section-title">Development</div>
-      <div className="details-grid">
-        <div className="details-label">Open with VS Code</div>
-        <div className="details-value"><span className="subtle-link">Open with VS Code</span></div>
-        <div className="details-label">Create branch</div>
-        <div className="details-value"><span className="subtle-link">Create branch</span></div>
-        <div className="details-label">Create commit</div>
-        <div className="details-value"><span className="subtle-link">Create commit</span></div>
-      </div>
-    </div>
-  </aside>
-);
+  );
+};
 
 export default DetailsSidebar;

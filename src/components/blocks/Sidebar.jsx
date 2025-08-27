@@ -17,9 +17,8 @@ const Sidebar = () => {
     navigate('/login');
   };
 
-  // Toggle collapse state - now callable from anywhere
+  // Toggle collapse state
   const toggleCollapse = useCallback((e) => {
-    // Prevent event from bubbling if it's a specific element click
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
@@ -28,16 +27,14 @@ const Sidebar = () => {
 
   // Handle sidebar area clicks for collapse/expand
   const handleSidebarClick = useCallback((e) => {
-    // Only toggle if we're on desktop and not clicking on interactive elements
     if (window.innerWidth >= 1024) {
       const target = e.target;
       const isInteractive = target.closest('.nav-link') || 
                            target.closest('.logout-btn') || 
-                           target.closest('.collapse-btn') ||
-                           target.closest('button') ||
+                           target.closest('.collapse-btn') || 
+                           target.closest('button') || 
                            target.closest('a');
-      
-      // If not clicking on interactive elements, toggle collapse
+
       if (!isInteractive) {
         toggleCollapse(e);
       }
@@ -46,11 +43,9 @@ const Sidebar = () => {
 
   // Enhanced navigation handler with active state
   const handleNavigation = useCallback((path, label, e) => {
-    // Stop propagation to prevent sidebar collapse
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
-    
     console.log('=== SIDEBAR NAVIGATION ===');
     console.log('Attempting to navigate to:', path);
     console.log('Current location:', location.pathname);
@@ -81,7 +76,6 @@ const Sidebar = () => {
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -91,7 +85,6 @@ const Sidebar = () => {
   useEffect(() => {
     setIsOpen(false);
     
-    // Define navigation items inside useEffect to avoid dependency issues
     const getNavigationItems = () => {
       const roleSpecificItems = {
         HR: [
@@ -99,23 +92,25 @@ const Sidebar = () => {
           { path: '/employee-list', icon: '👥', label: 'Employees' },
           { path: '/project-list', icon: '📁', label: 'Projects' },
           { path: '/add-project', icon: '➕', label: 'Add Project' },
-          { path: '/add-user', icon: '👤', label: 'Add Employee' }
+          { path: '/add-user', icon: '👤', label: 'Add Employee' },
+          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
         ],
         MANAGER: [
           { path: '/manager-dashboard', icon: '📊', label: 'Dashboard' },
           { path: '/project-list', icon: '📁', label: 'My Projects' },
           { path: '/add-project', icon: '➕', label: 'Add Project' },
-          { path: '/employee-list', icon: '👥', label: 'Team Members' }
+          { path: '/employee-list', icon: '👥', label: 'Team Members' },
+          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
         ],
         USER: [
           { path: '/employee-dashboard', icon: '📊', label: 'Dashboard' },
-          { path: '/projects', icon: '📁', label: 'My Projects' }
+          { path: '/projects', icon: '📁', label: 'My Projects' },
+          { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' }
         ]
       };
-
       return roleSpecificItems[user?.role] || [];
     };
-    
+
     // Set active item based on current path
     const currentPath = location.pathname;
     const navItems = getNavigationItems();
@@ -137,20 +132,22 @@ const Sidebar = () => {
         { path: '/employee-list', icon: '👥', label: 'Employees' },
         { path: '/project-list', icon: '📁', label: 'Projects' },
         { path: '/add-project', icon: '➕', label: 'Add Project' },
-        { path: '/add-user', icon: '👤', label: 'Add Employee' }
+        { path: '/add-user', icon: '👤', label: 'Add Employee' },
+        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
       ],
       MANAGER: [
         { path: '/manager-dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/project-list', icon: '📁', label: 'My Projects' },
         { path: '/add-project', icon: '➕', label: 'Add Project' },
-        { path: '/employee-list', icon: '👥', label: 'Team Members' }
+        { path: '/employee-list', icon: '👥', label: 'Team Members' },
+        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
       ],
       USER: [
         { path: '/employee-dashboard', icon: '📊', label: 'Dashboard' },
-        { path: '/projects', icon: '📁', label: 'My Projects' }
+        { path: '/projects', icon: '📁', label: 'My Projects' },
+        { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' }
       ]
     };
-
     return roleSpecificItems[user?.role] || [];
   };
 
@@ -188,15 +185,10 @@ const Sidebar = () => {
       </button>
 
       {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          className="sidebar-overlay"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {isOpen && <div className="sidebar-overlay"></div>}
 
-      {/* Sidebar - Click anywhere to toggle collapse on desktop */}
-      <aside 
+      {/* Sidebar */}
+      <div 
         ref={sidebarRef}
         className={`sidebar ${isOpen ? 'sidebar-open' : ''} ${isCollapsed ? 'sidebar-collapsed' : ''}`}
         onClick={handleSidebarClick}
@@ -205,73 +197,66 @@ const Sidebar = () => {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">
-              <span>PM</span>
+              PM
             </div>
-            {!isCollapsed && (
-              <div className="brand-text">
-                <h3>ProjectFlow</h3>
-                <span>Management Suite</span>
-              </div>
-            )}
+            <div className="brand-text">
+              <h3>Project Hub</h3>
+              <span>Management Suite</span>
+            </div>
           </div>
-          
-          {/* Desktop Collapse Button */}
           <button 
             className="collapse-btn desktop-only"
             onClick={toggleCollapse}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <span className={`collapse-icon ${isCollapsed ? 'collapsed' : ''}`}>
+            <span className="collapse-icon">
               {isCollapsed ? '→' : '←'}
             </span>
           </button>
         </div>
 
-        {/* User Info */}
+        {/* User Section */}
         <div className="sidebar-user">
           <div className="user-avatar">
             {getUserInitials(user)}
           </div>
-          {!isCollapsed && (
-            <div className="user-info">
-              <div className="user-name">{user?.name || user?.email}</div>
-              <div className="user-role">
-                <div 
-                  className="role-badge"
-                  style={{ background: getRoleBadgeColor(user?.role) }}
-                >
-                  {user?.role}
-                </div>
-              </div>
-              <div className="user-status">
-                <span className="status-dot"></span>
-                <span className="status-text">Online</span>
+          <div className="user-info">
+            <div className="user-name">{user.name || user.email}</div>
+            <div className="user-role">
+              <div 
+                className="role-badge"
+                style={{ background: getRoleBadgeColor(user.role) }}
+              >
+                {user.role}
               </div>
             </div>
-          )}
+            <div className="user-status">
+              <div className="status-dot"></div>
+              <span className="status-text">Online</span>
+            </div>
+          </div>
         </div>
 
         {/* Navigation */}
         <nav className="sidebar-nav">
-          {/* Main Navigation */}
           <ul className="nav-list main-nav">
             {navigationItems.map((item, index) => (
               <li key={index} className="nav-item">
                 <button
                   className={`nav-link ${activeItem === item.label ? 'active' : ''}`}
                   onClick={(e) => handleNavigation(item.path, item.label, e)}
-                  title={isCollapsed ? item.label : ''}
+                  title={isCollapsed ? item.label : undefined}
                 >
                   <span className="nav-icon">{item.icon}</span>
-                  {!isCollapsed && (
-                    <span className="nav-label">{item.label}</span>
+                  <span className="nav-label">{item.label}</span>
+                  {item.label === 'AI Intelligence' && (
+                    <span className="notification-badge">NEW</span>
                   )}
                 </button>
               </li>
             ))}
           </ul>
 
-          {/* Divider */}
           <div className="nav-divider"></div>
 
           {/* Quick Actions */}
@@ -279,22 +264,11 @@ const Sidebar = () => {
             <li className="nav-item">
               <button 
                 className="nav-link quick-action"
-                title={isCollapsed ? "Notifications" : ''}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => handleNavigation('/sprint-board', 'Sprint Board', e)}
+                title={isCollapsed ? 'Sprint Board' : undefined}
               >
-                <span className="nav-icon">🔔</span>
-                {!isCollapsed && <span className="nav-label">Notifications</span>}
-                <span className="notification-badge">3</span>
-              </button>
-            </li>
-            <li className="nav-item">
-              <button 
-                className="nav-link quick-action"
-                title={isCollapsed ? "Settings" : ''}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="nav-icon">⚙️</span>
-                {!isCollapsed && <span className="nav-label">Settings</span>}
+                <span className="nav-icon">📋</span>
+                <span className="nav-label">Sprint Board</span>
               </button>
             </li>
           </ul>
@@ -304,29 +278,26 @@ const Sidebar = () => {
         <div className="sidebar-footer">
           <button 
             className="logout-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLogout();
-            }}
-            title={isCollapsed ? "Sign Out" : ''}
+            onClick={handleLogout}
+            title={isCollapsed ? 'Logout' : undefined}
           >
             <span className="logout-icon">🚪</span>
-            {!isCollapsed && <span className="logout-text">Sign Out</span>}
+            <span className="logout-text">Logout</span>
           </button>
         </div>
 
-        {/* Click-to-toggle hint for desktop users */}
+        {/* Hints for collapse functionality */}
         {!isCollapsed && (
-          <div className="sidebar-hint desktop-only">
-            <span className="hint-text">Click anywhere to collapse</span>
+          <div className="sidebar-hint">
+            Click anywhere to collapse
           </div>
         )}
         {isCollapsed && (
-          <div className="sidebar-hint-collapsed desktop-only">
-            <span className="hint-icon">👆</span>
+          <div className="sidebar-hint-collapsed">
+            👆
           </div>
         )}
-      </aside>
+      </div>
     </>
   );
 };

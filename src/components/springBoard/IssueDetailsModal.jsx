@@ -1,32 +1,14 @@
-// src/components/springBoard/IssueDetailsModal.jsx
 import React from 'react';
 import IssueDetailsView from './IssueDetailsView';
-import '../../assets/css/SprintBoard.css';
+import '../../assets/css/IssueDetails.css';
 
 function IssueDetailsModal({ taskId, projectId, onClose, onChanged }) {
   if (!taskId) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.35)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          width: 'min(1100px, 96vw)',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          background: '#fff',
-          borderRadius: 8,
-        }}
+    <div className="issue-overlay" onClick={onClose}>
+      <div 
+        className="issue-surface"
         onClick={(e) => e.stopPropagation()}
       >
         <IssueDetailsView
@@ -34,6 +16,7 @@ function IssueDetailsModal({ taskId, projectId, onClose, onChanged }) {
           projectId={projectId}
           onClose={onClose}
           onChanged={onChanged}
+          allowClose={true}
         />
       </div>
     </div>
