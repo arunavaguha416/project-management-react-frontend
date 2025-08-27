@@ -33,11 +33,6 @@ const EmployeeDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [submittingLeave, setSubmittingLeave] = useState(false);
 
-  // Utility functions
-  const getInitials = (name) => {
-    if (!name) return "U";
-    return name.split(" ").map(n => n.charAt(0)).join("").toUpperCase().slice(0, 2);
-  };
 
   const getStatusColor = (status) => {
     const colors = {
@@ -185,7 +180,7 @@ const EmployeeDashboard = () => {
           message: "Failed to submit: " + (res.data.errors ? Object.values(res.data.errors).join("; ") : "")
         });
       }
-    } catch (error) {
+    } catch {
       setLeaveStatus({
         type: 'error',
         message: "Error submitting leave request."
