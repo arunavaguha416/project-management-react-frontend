@@ -2,9 +2,12 @@ import React, { useState, useEffect, useContext, useCallback } from "react";
 import axiosInstance from "../../services/axiosinstance";
 import { AuthContext } from "../../context/auth-context";
 import { useNavigate } from "react-router-dom";
+import "../../assets/css/EmployeeList.css";
 
 const EmployeeList = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [paginationLoading, setPaginationLoading] = useState(false);
@@ -17,7 +20,13 @@ const EmployeeList = () => {
     totalCount: 0
   });
 
-  const navigate = useNavigate();
+  // Summary stats
+  const [employeeStats, setEmployeeStats] = useState({
+    total: 0,
+    hr: 0,
+    managers: 0,
+    employees: 0
+  });
 
   // Optimized fetch function with pagination loading state
   const fetchEmployees = useCallback(
@@ -28,7 +37,7 @@ const EmployeeList = () => {
         } else {
           setIsLoading(true);
         }
-
+        
         const response = await axiosInstance.post(
           "/hr-management/employees/list/",
           {
@@ -38,15 +47,24 @@ const EmployeeList = () => {
             role: roleFilter
           }
         );
-
+        
         if (response.data.status) {
-          setEmployees(response.data.records || []);
+          const employeeData = response.data.records || [];
+          setEmployees(employeeData);
           setPagination(prev => ({
             ...prev,
             totalCount: response.data.count || 0,
             totalPages: response.data.num_pages || 1,
             currentPage: response.data.current_page || 1
           }));
+
+          // Calculate stats
+          setEmployeeStats({
+            total: response.data.count || 0,
+            hr: employeeData.filter(emp => (emp.user?.role || emp.role) === 'HR').length,
+            managers: employeeData.filter(emp => (emp.user?.role || emp.role) === 'MANAGER').length,
+            employees: employeeData.filter(emp => (emp.user?.role || emp.role) === 'USER').length
+          });
         }
       } catch (error) {
         console.error("Error fetching employees:", error);
@@ -77,22 +95,44 @@ const EmployeeList = () => {
     fetchEmployees(false);
   };
 
-  const handleBack = () => {
-    navigate(-1);
+  const handleRoleFilter = (role) => {
+    setRoleFilter(role);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
-  const Pagination = ({
-    currentPage,
-    totalPages,
-    onPageChange,
-    totalCount,
-    pageSize,
-    isLoading = false
-  }) => {
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n.charAt(0)).join("").toUpperCase().slice(0, 2);
+  };
+
+  const getRoleColor = (role) => {
+    const colors = {
+      'HR': '#e91e63',
+      'MANAGER': '#ff9800',
+      'USER': '#4caf50'
+    };
+    return colors[role] || '#757575';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '--';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatSalary = (salary) => {
+    if (!salary) return '--';
+    return `₹${parseInt(salary).toLocaleString('en-IN')}`;
+  };
+
+  const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, pageSize, isLoading = false }) => {
     const getPageNumbers = () => {
       const pages = [];
       const maxVisible = 5;
-
+      
       if (totalPages <= maxVisible) {
         for (let i = 1; i <= totalPages; i++) {
           pages.push(i);
@@ -129,274 +169,298 @@ const EmployeeList = () => {
     if (totalCount === 0) return null;
 
     return (
-      <div className="d-flex justify-content-between align-items-center mt-4 p-3 border-top">
-        <div className="text-muted small">
-          {isLoading ? (
-            <div className="d-flex align-items-center">
-              <div
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-              >
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              Loading employees...
-            </div>
-          ) : (
-            <>Showing {startItem} to {endItem} of {totalCount} employees</>
-          )}
+      <div className={`pagination-container ${isLoading ? 'loading' : ''}`}>
+        <div className="pagination-info">
+          Showing {startItem} to {endItem} of {totalCount} employees
         </div>
-        {totalPages > 1 ? (
-          <nav>
-            <ul className="pagination pagination-sm mb-0">
-              <li
-                className={`page-item ${currentPage === 1 || isLoading ? "disabled" : ""}`}
+        
+        <div className="pagination">
+          <button
+            className="page-btn prev"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1 || isLoading}
+          >
+            ← Previous
+          </button>
+
+          <div className="page-numbers">
+            {getPageNumbers().map((page, index) => (
+              <button
+                key={index}
+                className={`page-number ${page === currentPage ? 'active' : ''} ${page === '...' ? 'dots' : ''}`}
+                onClick={() => typeof page === 'number' && onPageChange(page)}
+                disabled={page === '...' || isLoading}
               >
-                <button
-                  className="page-link"
-                  onClick={() => onPageChange(currentPage - 1)}
-                  disabled={currentPage === 1 || isLoading}
-                >
-                  Previous
-                </button>
-              </li>
-              {getPageNumbers().map((page, index) => (
-                <li
-                  key={index}
-                  className={`page-item ${page === currentPage ? "active" : ""} ${isLoading ? "disabled" : ""}`}
-                >
-                  {page === "..." ? (
-                    <span className="page-link">...</span>
-                  ) : (
-                    <button
-                      className="page-link"
-                      onClick={() => onPageChange(page)}
-                      disabled={isLoading}
-                    >
-                      {page}
-                    </button>
-                  )}
-                </li>
-              ))}
-              <li
-                className={`page-item ${currentPage === totalPages || isLoading ? "disabled" : ""}`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => onPageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages || isLoading}
-                >
-                  Next
-                </button>
-              </li>
-            </ul>
-          </nav>
-        ) : (
-          <div className="text-muted small">Page 1 of 1</div>
-        )}
+                {page}
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="page-btn next"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages || isLoading}
+          >
+            Next →
+          </button>
+        </div>
       </div>
     );
   };
 
-  const getInitials = name => {
-    return name ? name.charAt(0).toUpperCase() : "?";
-  };
+  if (isLoading) {
+    return (
+      <div className="employee-list-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading employees...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="dashboard-container">
+    <div className="employee-list-container">
+      {/* Back Button */}
+      <div className="page-header">
+        <button 
+          className="back-btn"
+          onClick={() => navigate(-1)}
+          title="Go back"
+        >
+          <span className="back-icon">←</span>
+          <span className="back-text">Back</span>
+        </button>
+      </div>
+
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="dashboard-title">Employee Management</h1>
-        <div className="d-flex gap-2">
+      <div className="employee-list-header">
+        <div className="header-content">
+          <div className="header-info">
+            <h1 className="page-title">Employee Directory</h1>
+            <p className="page-subtitle">Manage your team members and their information</p>
+          </div>
+          
           {user.role === "HR" && (
-            <button
-              className="btn btn-jira"
-              onClick={() => navigate("/employees/create")}
-            >
-              Add Employee
-            </button>
+            <div className="header-actions">
+              <button 
+                className="action-btn primary"
+                onClick={() => navigate('/add-user')}
+              >
+                <span className="btn-icon">👤</span>
+                Add Employee
+              </button>
+            </div>
           )}
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card total">
+          <div className="stat-icon">👥</div>
+          <div className="stat-content">
+            <h3>{employeeStats.total}</h3>
+            <p>Total Employees</p>
+          </div>
+        </div>
+        <div className="stat-card hr">
+          <div className="stat-icon">🏢</div>
+          <div className="stat-content">
+            <h3>{employeeStats.hr}</h3>
+            <p>HR Staff</p>
+          </div>
+        </div>
+        <div className="stat-card managers">
+          <div className="stat-icon">👨‍💼</div>
+          <div className="stat-content">
+            <h3>{employeeStats.managers}</h3>
+            <p>Managers</p>
+          </div>
+        </div>
+        <div className="stat-card employees">
+          <div className="stat-icon">👤</div>
+          <div className="stat-content">
+            <h3>{employeeStats.employees}</h3>
+            <p>Employees</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="filters-section">
+        <div className="search-container">
+          <form onSubmit={handleSearch} className="search-form">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+            <button type="submit" className="search-btn">
+              Search
+            </button>
+          </form>
+        </div>
+
+        <div className="role-filters">
           <button
-            className="btn btn-outline-secondary"
-            onClick={handleBack}
+            className={`filter-btn ${roleFilter === "" ? "active" : ""}`}
+            onClick={() => handleRoleFilter("")}
           >
-            <i className="fas fa-arrow-left me-2" />
-            Back
+            All Roles
+          </button>
+          <button
+            className={`filter-btn ${roleFilter === "HR" ? "active" : ""}`}
+            onClick={() => handleRoleFilter("HR")}
+          >
+            🏢 HR
+          </button>
+          <button
+            className={`filter-btn ${roleFilter === "MANAGER" ? "active" : ""}`}
+            onClick={() => handleRoleFilter("MANAGER")}
+          >
+            👨‍💼 Managers
+          </button>
+          <button
+            className={`filter-btn ${roleFilter === "USER" ? "active" : ""}`}
+            onClick={() => handleRoleFilter("USER")}
+          >
+            👤 Employees
           </button>
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="dashboard-section mb-4">
-        <div className="section-header">
-          <h2>Search & Filter</h2>
-        </div>
-        <div className="p-4">
-          <form onSubmit={handleSearch} className="row g-3">
-            <div className="col-md-6">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search employees..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="col-md-3">
-              <select
-                className="form-select"
-                value={roleFilter}
-                onChange={e => setRoleFilter(e.target.value)}
-              >
-                <option value="">All Roles</option>
-                <option value="HR">HR</option>
-                <option value="MANAGER">Manager</option>
-                <option value="USER">Employee</option>
-              </select>
-            </div>
-            <div className="col-md-3">
-              <button type="submit" className="btn btn-jira w-100">
-                Search
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      {/* Employees Table */}
+      <div className="employees-section">
+        {employees.length > 0 ? (
+          <div className="employees-table-container">
+            <div className="employees-table">
+              <div className="table-header">
+                <div className="header-cell employee-col">Employee</div>
+                <div className="header-cell role-col">Role</div>
+                <div className="header-cell designation-col">Designation</div>
+                {user.role === "HR" && (
+                  <>
+                    <div className="header-cell salary-col">Salary</div>
+                    <div className="header-cell date-col">Joining Date</div>
+                    <div className="header-cell date-col">Date of Birth</div>
+                  </>
+                )}
+                <div className="header-cell status-col">Status</div>
+                {user.role === "HR" && (
+                  <div className="header-cell actions-col">Actions</div>
+                )}
+              </div>
 
-      {/* Stats */}
-      <div className="metrics-row mb-4">
-        <div className="metric-card">
-          <h3>{pagination.totalCount}</h3>
-          <p>Total Employees</p>
-        </div>
-        <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === "HR").length}</h3>
-          <p>HR Staff</p>
-        </div>
-        <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === "MANAGER").length}</h3>
-          <p>Managers</p>
-        </div>
-        <div className="metric-card">
-          <h3>{employees.filter(emp => emp.user?.role === "USER").length}</h3>
-          <p>Employees</p>
-        </div>
-      </div>
+              <div className="table-body">
+                {employees.map((employee) => (
+                  <div key={employee.id} className="table-row">
+                    <div className="table-cell employee-col">
+                      <div className="employee-info">
+                        <div className="employee-avatar">
+                          {getInitials(employee.user?.name || employee.name)}
+                        </div>
+                        <div className="employee-details">
+                          <div className="employee-name">
+                            {employee.user?.name || employee.name}
+                          </div>
+                          <div className="employee-username">
+                            @{employee.user?.username || employee.username}
+                          </div>
+                          <div className="employee-email">
+                            {employee.user?.email || employee.email}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-      {/* Table */}
-      <div className="dashboard-section">
-        <div className="section-header">
-          <h2>All Employees</h2>
-          <span className="badge bg-primary">{pagination.totalCount} Total</span>
-        </div>
-        <div className="table-container">
-          {isLoading ? (
-            <div className="text-center p-4">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+                    <div className="table-cell role-col">
+                      <span 
+                        className="role-badge"
+                        style={{ backgroundColor: getRoleColor(employee.user?.role || employee.role) }}
+                      >
+                        {employee.user?.role || employee.role}
+                      </span>
+                    </div>
+
+                    <div className="table-cell designation-col">
+                      {employee.designation || '--'}
+                    </div>
+
+                    {user.role === "HR" && (
+                      <>
+                        <div className="table-cell salary-col">
+                          {formatSalary(employee.salary)}
+                        </div>
+                        <div className="table-cell date-col">
+                          {formatDate(employee.date_of_joining)}
+                        </div>
+                        <div className="table-cell date-col">
+                          {formatDate(employee.user?.date_of_birth)}
+                        </div>
+                      </>
+                    )}
+
+                    <div className="table-cell status-col">
+                      <span className="status-badge active">Active</span>
+                    </div>
+
+                    {user.role === "HR" && (
+                      <div className="table-cell actions-col">
+                        <button
+                          className="action-btn-small view"
+                          onClick={() => navigate(`/user-details/${employee.user?.id || employee.id}`)}
+                          title="View Details"
+                        >
+                          👁️
+                        </button>
+                        <button
+                          className="action-btn-small edit"
+                          onClick={() => navigate(`/edit-user/${employee.user?.id || employee.id}`)}
+                          title="Edit Employee"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <>
-              <table className="table table-hover mb-0">
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Email</th>
-                    {user.role === "HR" && <th>Role</th>}
-                    <th>Designation</th>
-                    {user.role === "HR" && <th>Salary</th>}
-                    {user.role === "HR" && <th>Date of Joining</th>}
-                    {user.role === "HR" && <th>Date of Birth</th>}
-                    <th>Status</th>
-                    {user.role === "HR" && <th>Actions</th>}
-                  </tr>
-                </thead>
-                <tbody style={{ opacity: paginationLoading ? 0.6 : 1 }}>
-                  {employees.length > 0 ? (
-                    employees.map(employee => (
-                      <tr key={employee.id}>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <div className="avatar-circle me-3">
-                              {getInitials(employee.user?.name || employee.name)}
-                            </div>
-                            <div>
-                              <div className="fw-bold">
-                                {employee.user?.name || employee.name}
-                              </div>
-                              <small className="text-muted">
-                                @{employee.user?.username || employee.username}
-                              </small>
-                            </div>
-                          </div>
-                        </td>
-                        <td>{employee.user?.email || employee.email}</td>
-                        {user.role === "HR" && (
-                          <td>
-                            <span
-                              className={`status-badge ${(employee.user?.role || employee.role).toLowerCase()}`}
-                            >
-                              {employee.user?.role || employee.role}
-                            </span>
-                          </td>
-                        )}
-                        <td>{employee.designation}</td>
-                        {user.role === "HR" && <td>₹{employee.salary}</td>}
-                        {user.role === "HR" && (
-                          <td>
-                            {new Date(employee.date_of_joining).toLocaleDateString()}
-                          </td>
-                        )}
-                        {user.role === "HR" && (
-                          <td>
-                            {new Date(employee.user?.date_of_birth).toLocaleDateString()}
-                          </td>
-                        )}
-                        <td>
-                          <span className="status-badge active">Active</span>
-                        </td>
-                        {user.role === "HR" && (
-                          <td>
-                            <button
-                              className="btn btn-sm btn-outline-jira me-2"
-                              onClick={() => navigate(`/employees/edit/${employee.id}`)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-primary"
-                              onClick={() => navigate(`/employee/details/${employee.id}`)}
-                            >
-                              View
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={user.role === "HR" ? 9 : 4}
-                        className="text-center text-muted py-4"
-                      >
-                        No employees found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </>
-          )}
-        </div>
-        <Pagination
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          onPageChange={handlePageChange}
-          totalCount={pagination.totalCount}
-          pageSize={pagination.pageSize}
-          isLoading={paginationLoading}
-        />
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-icon">👥</div>
+            <h3>No employees found</h3>
+            <p>
+              {searchQuery || roleFilter 
+                ? "Try adjusting your search or filters" 
+                : "No employees available at the moment"}
+            </p>
+            {user.role === "HR" && !searchQuery && !roleFilter && (
+              <button 
+                className="create-btn"
+                onClick={() => navigate('/add-user')}
+              >
+                Add Your First Employee
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+        totalCount={pagination.totalCount}
+        pageSize={pagination.pageSize}
+        isLoading={paginationLoading}
+      />
     </div>
   );
 };

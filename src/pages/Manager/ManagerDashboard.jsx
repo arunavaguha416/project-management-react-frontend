@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from '../../context/auth-context';
 import axiosInstance from '../../services/axiosinstance';
-import { useNavigate } from "react-router-dom";
+import "../../assets/css/Dashboard.css";
 
 const PAGE_SIZE = 5;
 
@@ -20,12 +21,32 @@ const ManagerDashboard = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [managedProjects, setManagedProjects] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
-  
+
   // Loading states
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [teamLoading, setTeamLoading] = useState(true);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [leaveLoading, setLeaveLoading] = useState(true);
+
+  // Utility functions
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n.charAt(0)).join("").toUpperCase().slice(0, 2);
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'Ongoing': '#4caf50',
+      'Active': '#4caf50', 
+      'Completed': '#2196f3',
+      'On Hold': '#ff9800',
+      'Cancelled': '#f44336',
+      'PENDING': '#ff9800',
+      'APPROVED': '#4caf50',
+      'REJECTED': '#f44336'
+    };
+    return colors[status] || '#757575';
+  };
 
   // Fetch dashboard metrics
   const fetchMetrics = useCallback(async () => {
@@ -103,12 +124,12 @@ const ManagerDashboard = () => {
     try {
       const res = await axiosInstance.post(
         '/hr-management/manager/leave-request/action/',
-        { request_id: requestId, action: action },
+        { request_id: requestId, action },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
       if (res.data.status) {
-        fetchLeaveRequests(); // Refresh list
-        fetchMetrics(); // Update metrics
+        fetchLeaveRequests();
+        fetchMetrics();
       }
     } catch (error) {
       console.error('Error updating leave request:', error);
@@ -118,198 +139,243 @@ const ManagerDashboard = () => {
   // Initialize dashboard data
   useEffect(() => {
     if (authLoading || !user) return;
-    
     fetchMetrics();
     fetchTeamMembers();
     fetchManagedProjects();
     fetchLeaveRequests();
   }, [authLoading, user, fetchMetrics, fetchTeamMembers, fetchManagedProjects, fetchLeaveRequests]);
 
-  if (authLoading || !user) return <div className="loading">Loading...</div>;
+  if (authLoading || !user) {
+    return (
+      <div className="dashboard-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-container">
-      <h1 className="dashboard-title">Project Manager Dashboard</h1>
-      
-      {/* Metrics Cards */}
-      <div className="metrics-row">
-        <div className="metric-card">
-          <h3>{metricsLoading ? '--' : metrics.total_projects}</h3>
-          <p>Total Projects</p>
-        </div>
-        <div className="metric-card">
-          <h3>{metricsLoading ? '--' : metrics.active_projects}</h3>
-          <p>Active Projects</p>
-        </div>
-        <div className="metric-card">
-          <h3>{metricsLoading ? '--' : metrics.team_size}</h3>
-          <p>Team Members</p>
-        </div>
-        <div className="metric-card">
-          <h3>{metricsLoading ? '--' : metrics.pending_leaves}</h3>
-          <p>Pending Leaves</p>
+      {/* Header */}
+      <div className="dashboard-header">
+        <div className="header-content">
+          <div className="welcome-section">
+            <h1 className="dashboard-title">Manager Dashboard</h1>
+            <p className="dashboard-subtitle">Welcome back, {user.name}! Here's your team overview.</p>
+          </div>
+          <div className="header-actions">
+            <button 
+              className="action-btn primary"
+              onClick={() => navigate('/add-project')}
+            >
+              <span className="btn-icon">➕</span>
+              Add Project
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card primary">
+          <div className="stat-icon">📊</div>
+          <div className="stat-content">
+            <h3>{metricsLoading ? '...' : metrics.total_projects}</h3>
+            <p>Total Projects</p>
+          </div>
+        </div>
+        <div className="stat-card success">
+          <div className="stat-icon">🎯</div>
+          <div className="stat-content">
+            <h3>{metricsLoading ? '...' : metrics.active_projects}</h3>
+            <p>Active Projects</p>
+          </div>
+        </div>
+        <div className="stat-card info">
+          <div className="stat-icon">👥</div>
+          <div className="stat-content">
+            <h3>{metricsLoading ? '...' : metrics.team_size}</h3>
+            <p>Team Size</p>
+          </div>
+        </div>
+        <div className="stat-card warning">
+          <div className="stat-icon">📅</div>
+          <div className="stat-content">
+            <h3>{metricsLoading ? '...' : metrics.pending_leaves}</h3>
+            <p>Pending Leaves</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
       <div className="dashboard-grid">
-        
-        {/* Team Members Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2>Team Members</h2>
-            <button onClick={() => navigate('/team-management')}>View All</button>
+        {/* Team Members */}
+        <div className="dashboard-card">
+          <div className="card-header">
+            <h3>Team Members</h3>
+            <span className="team-count">{teamMembers.length} members</span>
           </div>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>Current Project</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamLoading ? (
-                  <tr><td colSpan="4">Loading...</td></tr>
-                ) : teamMembers.length > 0 ? (
-                  teamMembers.map(member => (
-                    <tr key={member.id}>
-                      <td>{member.name || '--'}</td>
-                      <td>{member.designation || '--'}</td>
-                      <td>{member.current_project || '--'}</td>
-                      <td>
-                        <span className={`status-badge ${member.status?.toLowerCase()}`}>
-                          {member.status || 'Active'}
+          <div className="card-content">
+            {teamLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner small"></div>
+                <p>Loading team...</p>
+              </div>
+            ) : teamMembers.length > 0 ? (
+              <div className="team-list">
+                {teamMembers.map((member, index) => (
+                  <div key={index} className="team-item">
+                    <div className="member-avatar">
+                      {getInitials(member.name)}
+                    </div>
+                    <div className="member-info">
+                      <h4 className="member-name">{member.name || '--'}</h4>
+                      <p className="member-email">{member.email}</p>
+                      <div className="member-meta">
+                        <span className="member-role">
+                          {member.designation || member.role || '--'}
                         </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr><td colSpan="4">No team members found</td></tr>
-                )}
-              </tbody>
-            </table>
+                        <span className="member-project">
+                          {member.current_project || 'Unassigned'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="member-status active">
+                      {member.status || 'Active'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-icon">👥</div>
+                <h4>No team members found</h4>
+                <p>Your team will appear here once assigned</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Leave Approval Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2>Pending Leave Requests</h2>
-            <button onClick={() => navigate('/leave-management')}>View All</button>
+        {/* Managed Projects */}
+        <div className="dashboard-card">
+          <div className="card-header">
+            <h3>My Projects</h3>
+            <button 
+              className="view-all-btn"
+              onClick={() => navigate('/project-list')}
+            >
+              View All
+            </button>
           </div>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Days</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaveLoading ? (
-                  <tr><td colSpan="5">Loading...</td></tr>
-                ) : leaveRequests.length > 0 ? (
-                  leaveRequests.map(request => (
-                    <tr key={request.id}>
-                      <td>{request.employee_name}</td>
-                      <td>{request.start_date}</td>
-                      <td>{request.end_date}</td>
-                      <td>{request.total_days}</td>
-                      <td>
-                        <button 
-                          className="btn-approve"
-                          onClick={() => handleLeaveAction(request.id, 'APPROVED')}
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          className="btn-reject"
-                          onClick={() => handleLeaveAction(request.id, 'REJECTED')}
-                        >
-                          Reject
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr><td colSpan="5">No pending leave requests</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Managed Projects Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2>My Managed Projects</h2>
-            <button onClick={() => navigate('/project-management')}>View All</button>
-          </div>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Project Name</th>
-                  <th>Team Size</th>
-                  <th>Progress</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projectsLoading ? (
-                  <tr><td colSpan="4">Loading...</td></tr>
-                ) : managedProjects.length > 0 ? (
-                  managedProjects.map(project => (
-                    <tr key={project.id}>
-                      <td>{project.name}</td>
-                      <td>{project.team_size || 0}</td>
-                      <td>
-                        <div className="progress-bar">
-                          <div 
-                            className="progress-fill" 
-                            style={{width: `${project.progress || 0}%`}}
-                          ></div>
-                          <span>{project.progress || 0}%</span>
+          <div className="card-content">
+            {projectsLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner small"></div>
+                <p>Loading projects...</p>
+              </div>
+            ) : managedProjects.length > 0 ? (
+              <div className="projects-list">
+                {managedProjects.map((project) => (
+                  <div key={project.id} className="project-item">
+                    <div className="project-info">
+                      <h4 className="project-name">{project.name}</h4>
+                      <div className="project-meta">
+                        <div className="team-size">
+                          <span className="team-icon">👥</span>
+                          <span>{project.team_size || 0} members</span>
                         </div>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${project.status?.toLowerCase()}`}>
-                          {project.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr><td colSpan="4">No projects found</td></tr>
-                )}
-              </tbody>
-            </table>
+                        <div className="project-progress">
+                          <div className="progress-bar">
+                            <div 
+                              className="progress-fill"
+                              style={{ width: `${project.progress || 0}%` }}
+                            ></div>
+                          </div>
+                          <span className="progress-text">{project.progress || 0}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div 
+                      className="project-status"
+                      style={{ color: getStatusColor(project.status) }}
+                    >
+                      {project.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-icon">📂</div>
+                <h4>No projects assigned</h4>
+                <p>Projects you manage will appear here</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Quick Actions Section */}
-        <div className="dashboard-section quick-actions">
-          <div className="section-header">
-            <h2>Quick Actions</h2>
+        {/* Leave Requests */}
+        <div className="dashboard-card full-width">
+          <div className="card-header">
+            <h3>Team Leave Requests</h3>
+            <span className="pending-count">{leaveRequests.length} pending</span>
           </div>
-          <div className="action-buttons">
-            <button onClick={() => navigate('/add-project')}>
-              + New Project
-            </button>
-            <button onClick={() => navigate('/team/assign')}>
-              Assign Tasks
-            </button>
-            <button onClick={() => navigate('/reports')}>
-              View Reports
-            </button>
-            <button onClick={() => navigate('/team/performance')}>
-              Team Performance
-            </button>
+          <div className="card-content">
+            {leaveLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner small"></div>
+                <p>Loading leave requests...</p>
+              </div>
+            ) : leaveRequests.length > 0 ? (
+              <div className="leaves-table">
+                {leaveRequests.map((request) => (
+                  <div key={request.id} className="leave-item">
+                    <div className="leave-employee">
+                      <div className="employee-avatar">
+                        {getInitials(request.employee_name)}
+                      </div>
+                      <div className="employee-details">
+                        <h4>{request.employee_name}</h4>
+                        <p>{request.employee_email || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="leave-dates">
+                      <div className="date-range">
+                        <span className="from-date">{request.start_date}</span>
+                        <span className="date-arrow">→</span>
+                        <span className="to-date">{request.end_date}</span>
+                      </div>
+                      <span className="leave-days">
+                        {request.total_days} day{request.total_days !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="leave-reason">
+                      <p>{request.reason || 'No reason provided'}</p>
+                    </div>
+                    <div className="leave-actions">
+                      <button 
+                        className="approve-btn"
+                        onClick={() => handleLeaveAction(request.id, 'APPROVE')}
+                      >
+                        ✓ Approve
+                      </button>
+                      <button 
+                        className="reject-btn"
+                        onClick={() => handleLeaveAction(request.id, 'REJECT')}
+                      >
+                        ✗ Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-icon">📅</div>
+                <h4>No pending leave requests</h4>
+                <p>All caught up! New requests will appear here.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

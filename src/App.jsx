@@ -1,8 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-
-import Dashboard from './pages/HR/Dashboard';
+import Dashboard from './pages/HR/HrDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Register from './pages/HR/Register';
@@ -12,7 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AddProject from './pages/Manager/AddProject';
 import UserDetails from './pages/HR/UserDetails';
 import ProjectDetails from './pages/Manager/ProjectDetails';
-import EmployeeDashboard from './pages/EmployeeDashboard';
+import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
 import ManagerDashboard from './pages/Manager/ManagerDashboard';
 import ProjectList from './pages/Manager/ProjectList';
 import EmployeeList from './pages/Common/EmployeeList';
@@ -22,156 +21,38 @@ import EditProject from './pages/Manager/EditProject';
 
 export default function App() {
   return (
-    <AuthProvider>
+    <ErrorBoundary>
       <Router>
-        <ErrorBoundary>
+        <AuthProvider>
           <Routes>
             {/* Public Routes */}
-            <Route 
-              path="/login" 
-              element={<Login />} 
-            />
+            <Route path="/login" element={<Login />} />
             
-            <Route 
-              path="/" 
-              element={<Login />} 
-            />
-
             {/* Protected Routes with Layout */}
-            <Route 
-              path="/add-user" 
-              element={
-                <ProtectedRoute allowedRoles={["HR"]}>
-                  <Layout>
-                    <Register />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute allowedRoles={["HR"]}>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/add-project" 
-              element={
-                <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
-                  <Layout>
-                    <AddProject />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/edit-project/:id" 
-              element={
-                <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
-                  <Layout>
-                    <EditProject />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/employee/details/:id" 
-              element={
-                <ProtectedRoute allowedRoles={["HR"]}>
-                  <Layout>
-                    <UserDetails />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/project/details/:id" 
-              element={
-                <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
-                  <Layout>
-                    <ProjectDetails />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/projects/list" 
-              element={
-                <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
-                  <Layout>
-                    <ProjectList />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/employee/list" 
-              element={
-                <ProtectedRoute allowedRoles={["HR", "MANAGER"]}>
-                  <Layout>
-                    <EmployeeList />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route
-              path="/employee-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["USER"]}>
-                  <Layout>
-                    <EmployeeDashboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/manager-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["MANAGER"]}>
-                  <Layout>
-                    <ManagerDashboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-
-             <Route
-              path="/sprint-board/:projectId"
-              element={
-                <ProtectedRoute allowedRoles={["MANAGER"]}>
-                  <Layout>
-                    <SprintBoard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects/:projectId/tasks/:taskId"
-              element={
-                <ProtectedRoute allowedRoles={["MANAGER"]}>
-                  <Layout>
-                    <IssueDetailsPage/>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-
+            <Route path="/*" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Routes>
+                    <Route path="/hr-dashboard" element={<Dashboard />} />
+                    <Route path="/add-user" element={<Register />} />
+                    <Route path="/add-project" element={<AddProject />} />
+                    <Route path="/edit-project/:id" element={<EditProject />} />
+                    <Route path="/employee/details/:id" element={<UserDetails />} />
+                    <Route path="/project-details/:id" element={<ProjectDetails />} />
+                    <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
+                    <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+                    <Route path="/project-list" element={<ProjectList />} />
+                    <Route path="/employee-list" element={<EmployeeList />} />
+                    <Route path="/sprint-board/:projectId" element={<SprintBoard />} />
+                    <Route path="/issue/:id" element={<IssueDetailsPage />} />
+                    <Route path="/" element={<Dashboard />} />
+                  </Routes>
+                </Layout>
+              </ProtectedRoute>
+            } />
           </Routes>
-        </ErrorBoundary>
+        </AuthProvider>
       </Router>
-    </AuthProvider>
+    </ErrorBoundary>
   );
 }

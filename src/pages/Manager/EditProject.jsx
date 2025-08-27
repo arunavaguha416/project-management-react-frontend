@@ -3,39 +3,46 @@ import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../../services/axiosinstance";
 import { AuthContext } from "../../context/auth-context";
 import UploadAttachments from "../../components/uploads/UploadAttachments";
+import "../../assets/css/EditProject.css";
 
 const toStr = (v) => (v === null || v === undefined ? "" : String(v));
 
 const EditProject = () => {
-  const { id } = useParams(); // project id from route
+  const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [company, setCompany] = useState(""); // UI only, not persisted to backend
-  const [manager, setManager] = useState(""); // selected manager id
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    company: "",
+    manager: "",
+    startDate: "",
+    endDate: "",
+    priority: "MEDIUM",
+    budget: "",
+    status: "PLANNING"
+  });
+
   const [managers, setManagers] = useState([]);
   const [companies, setCompanies] = useState([]);
-
-  const [attachments, setAttachments] = useState([]); // files to add on save
-  const [existingFiles, setExistingFiles] = useState([]); // loaded from backend
-
-  const [projectManagerId, setProjectManagerId] = useState(""); // from details
-  const [projectManagerName, setProjectManagerName] = useState(""); // for fallback label
-
+  const [attachments, setAttachments] = useState([]);
+  const [existingFiles, setExistingFiles] = useState([]);
+  const [projectManagerId, setProjectManagerId] = useState("");
+  const [projectManagerName, setProjectManagerName] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProject, setLoadingProject] = useState(true);
 
-  // Build normalized manager options; inject current manager if missing
+  // Build normalized manager options
   const managerOptions = useMemo(() => {
     const opts = (managers || []).map((m) => {
       const idStr = toStr(m.id);
       const label = m.user?.name || m.name || m.email || m.username || "Manager";
       return { id: idStr, label };
     });
+
     const pmId = toStr(projectManagerId);
     if (pmId && !opts.some((o) => o.id === pmId)) {
       const fallbackLabel = projectManagerName || "Current manager";
@@ -54,21 +61,20 @@ const EditProject = () => {
       if (filesRes?.data?.status) {
         setExistingFiles(filesRes.data.records || []);
       }
-    } catch {
-      // non-blocking
+    } catch (error) {
+      console.error("Error fetching files:", error);
     }
   }, [id, user.token]);
 
   useEffect(() => {
     const bootstrap = async () => {
       try {
-        setIsLoading(true);
-
-        // Fetch managers, companies, and project details in parallel
+        setLoadingProject(true);
+        
         const [mgrRes, compRes, projRes] = await Promise.all([
           axiosInstance.post("/hr-management/manager/list/", { role: "MANAGER" }),
           axiosInstance.post("/company/list/"),
-          axiosInstance.get(`/projects/details/${id}/`),
+          axiosInstance.get(`/projects/details/${id}/`)
         ]);
 
         if (mgrRes?.data?.status) setManagers(mgrRes.data.records || []);
@@ -76,22 +82,28 @@ const EditProject = () => {
 
         if (projRes?.data?.status && projRes?.data?.records) {
           const p = projRes.data.records;
-          setName(p.name || "");
-          setDescription(p.description || "");
+          setFormData({
+            name: p.name || "",
+            description: p.description || "",
+            company: toStr(p.company_id || ""),
+            manager: toStr(p.manager_id || ""),
+            startDate: p.start_date ? p.start_date.split('T')[0] : "",
+            endDate: p.end_date ? p.end_date.split('T')[0] : "",
+            priority: p.priority || "MEDIUM",
+            budget: p.budget ? String(p.budget) : "",
+            status: p.status || "PLANNING"
+          });
 
-          // Preselect manager from details
           const mid = toStr(p.manager_id);
           setProjectManagerId(mid);
           setProjectManagerName(p.manager_name || "");
-          setManager(mid);
         }
 
-        // Fetch existing files
         await fetchFiles();
-      } catch {
+      } catch (error) {
+        console.error("Error loading project:", error);
         setError("Failed to load project.");
       } finally {
-        setIsLoading(false);
         setLoadingProject(false);
       }
     };
@@ -99,15 +111,11 @@ const EditProject = () => {
     bootstrap();
   }, [id, fetchFiles]);
 
-  // Keep selection consistent once options are ready
-  useEffect(() => {
-    const val = toStr(manager);
-    if (!val) {
-      const pmId = toStr(projectManagerId);
-      if (pmId) setManager(pmId);
-      return;
-    }
-  }, [managerOptions, manager, projectManagerId]);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (error) setError("");
+  };
 
   const uploadAttachmentsForProject = async (projectId, files) => {
     if (!files || files.length === 0) return true;
@@ -123,9 +131,22 @@ const EditProject = () => {
         },
       });
       return !!res?.data?.status;
-    } catch {
+    } catch (error) {
+      console.error("File upload error:", error);
       return false;
     }
+  };
+
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setError("Project name is required.");
+      return false;
+    }
+    if (formData.startDate && formData.endDate && new Date(formData.startDate) > new Date(formData.endDate)) {
+      setError("End date cannot be before start date.");
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
@@ -133,178 +154,379 @@ const EditProject = () => {
     setError("");
     setSuccess("");
 
-    if (!name) {
-      setError("Project name is required.");
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
     try {
-      // Update project metadata
-      const updateRes = await axiosInstance.put(
-        "/projects/update/",
-        {
-          id,
-          name,
-          description,
-          // Provide both keys to maximize serializer compatibility without removing existing backend code
-          manager: manager || undefined,
-          manager_id: manager || undefined,
-        },
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
-      );
+      const updatePayload = {
+        id,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        manager_id: formData.manager || undefined,
+        company_id: formData.company || undefined,
+        start_date: formData.startDate || null,
+        end_date: formData.endDate || null,
+        priority: formData.priority,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        status: formData.status
+      };
+
+      const updateRes = await axiosInstance.put("/projects/update/", updatePayload, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
 
       if (!updateRes?.data?.status) {
         setError(updateRes?.data?.message || "Could not update project.");
-        setIsLoading(false);
         return;
       }
 
-      // Upload new attachments (if any)
-      const uploaded = await uploadAttachmentsForProject(id, attachments);
-      if (!uploaded) {
-        setSuccess("Project updated. Files failed to upload.");
-      } else {
+      let uploadSuccess = true;
+      if (attachments.length > 0) {
+        uploadSuccess = await uploadAttachmentsForProject(id, attachments);
+      }
+
+      if (uploadSuccess) {
         setSuccess("Project updated successfully!");
-        // refresh files list so new uploads appear
         await fetchFiles();
+      } else {
+        setSuccess("Project updated, but some files failed to upload.");
       }
 
       setAttachments([]);
-      setTimeout(() => navigate("/dashboard"), 1200);
-    } catch {
+      setTimeout(() => navigate(`/project-details/${id}`), 2000);
+    } catch (error) {
+      console.error("Update error:", error);
       setError("Error updating project.");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    try {
+      const response = await axiosInstance.delete(`/projects/delete-file/${fileId}/`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      
+      if (response.data.status) {
+        setExistingFiles(prev => prev.filter(file => file.id !== fileId));
+        setSuccess("File deleted successfully!");
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      setError("Failed to delete file.");
+    }
   };
 
   if (loadingProject) {
-    return <div style={{ padding: 24 }}>Loading project...</div>;
+    return (
+      <div className="edit-project-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading project...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="container" style={{ maxWidth: 720, margin: "24px auto" }}>
-      <h2 style={{ marginBottom: 16 }}>Edit project</h2>
+    <div className="edit-project-container">
+      {/* Back Button */}
+      <div className="page-header">
+        <button 
+          className="back-btn"
+          onClick={() => navigate(-1)}
+          title="Go back"
+        >
+          <span className="back-icon">←</span>
+          <span className="back-text">Back</span>
+        </button>
+      </div>
 
-      {error ? (
-        <div style={{ marginBottom: 12, color: "#b42318" }}>{error}</div>
-      ) : null}
-      {success ? (
-        <div style={{ marginBottom: 12, color: "#05603a" }}>{success}</div>
-      ) : null}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", marginBottom: 6 }}>Project name</label>
-          <input
-            type="text"
-            value={name}
-            disabled={isLoading}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter project name"
-            className="form-control"
-          />
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", marginBottom: 6 }}>
-            Description
-          </label>
-          <textarea
-            value={description}
-            disabled={isLoading}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter description"
-            className="form-control"
-            rows={4}
-          />
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", marginBottom: 6 }}>Company</label>
-          <select
-            value={company}
-            disabled={isLoading}
-            onChange={(e) => setCompany(e.target.value)}
-            className="form-control"
-          >
-            <option value="">Select company</option>
-            {companies?.map((c) => (
-              <option key={c.id || c._id || c.value} value={toStr(c.id || c._id || c.value)}>
-                {c.name || c.label}
-              </option>
-            ))}
-          </select>
-          <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-            Note: Company is currently not saved on the backend Project model.
+      {/* Header */}
+      <div className="edit-project-header">
+        <div className="header-content">
+          <div className="header-info">
+            <h1 className="page-title">Edit Project</h1>
+            <p className="page-subtitle">Update project information and settings</p>
+          </div>
+          <div className="header-icon">
+            <span className="project-icon">✏️</span>
           </div>
         </div>
+      </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", marginBottom: 6 }}>Manager</label>
-          <select
-            value={toStr(manager)}
-            disabled={isLoading}
-            onChange={(e) => setManager(toStr(e.target.value))}
-            className="form-control"
-          >
-            <option value="">Select manager (optional)</option>
-            {managerOptions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ marginBottom: 16 }}>
-          <UploadAttachments
-            label="Add files"
-            multiple
-            maxFiles={10}
-            value={attachments}
-            onChange={setAttachments}
-            disabled={isLoading}
-            helperText="Allowed: pdf, docx, xlsx, jpg, jpeg, png"
-          />
-        </div>
-
-        {/* Existing files */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>Existing files</div>
-          {existingFiles?.length ? (
-            <ul style={{ paddingLeft: 18, margin: 0 }}>
-              {existingFiles.map((f) => (
-                <li key={f.id} style={{ marginBottom: 6 }}>
-                  {f.url ? (
-                    <a href={f.url} target="_blank" rel="noreferrer">
-                      {f.filename}
-                    </a>
-                  ) : (
-                    <span>{f.filename}</span>
-                  )}
-                  <span style={{ color: "#666", marginLeft: 8, fontSize: 12 }}>
-                    ({(f.extension || "").toUpperCase()}, {Math.round((f.size / 1024) * 10) / 10}KB)
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div style={{ color: "#666", fontSize: 14 }}>No files uploaded yet.</div>
+      {/* Form Container */}
+      <div className="form-container">
+        <form onSubmit={handleSubmit} className="edit-project-form">
+          {/* Messages */}
+          {error && (
+            <div className="message error-message">
+              <div className="message-icon">⚠️</div>
+              <span>{error}</span>
+            </div>
           )}
-        </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn btn-primary"
-          style={{ minWidth: 140 }}
-        >
-          {isLoading ? "Saving..." : "Update Project"}
-        </button>
-      </form>
+          {success && (
+            <div className="message success-message">
+              <div className="message-icon">✅</div>
+              <span>{success}</span>
+            </div>
+          )}
+
+          {/* Basic Information */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <span className="section-icon">📝</span>
+              Basic Information
+            </h3>
+            
+            <div className="form-grid">
+              <div className="form-group full-width">
+                <label htmlFor="name" className="form-label required">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group full-width">
+                <label htmlFor="description" className="form-label">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="form-textarea"
+                  rows="4"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="company" className="form-label">
+                  Company
+                </label>
+                <select
+                  id="company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleInputChange}
+                  className="form-select"
+                >
+                  <option value="">Select Company</option>
+                  {companies.map(company => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="manager" className="form-label">
+                  Project Manager
+                </label>
+                <select
+                  id="manager"
+                  name="manager"
+                  value={formData.manager}
+                  onChange={handleInputChange}
+                  className="form-select"
+                >
+                  <option value="">Select Manager</option>
+                  {managerOptions.map(option => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="status" className="form-label">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="form-select"
+                >
+                  <option value="PLANNING">📋 Planning</option>
+                  <option value="ONGOING">🚀 Ongoing</option>
+                  <option value="COMPLETED">✅ Completed</option>
+                  <option value="ON_HOLD">⏸️ On Hold</option>
+                  <option value="CANCELLED">❌ Cancelled</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Project Details */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <span className="section-icon">📊</span>
+              Project Details
+            </h3>
+            
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="startDate" className="form-label">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  id="startDate"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleInputChange}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="endDate" className="form-label">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleInputChange}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="priority" className="form-label">
+                  Priority
+                </label>
+                <select
+                  id="priority"
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleInputChange}
+                  className="form-select"
+                >
+                  <option value="LOW">🟢 Low</option>
+                  <option value="MEDIUM">🟡 Medium</option>
+                  <option value="HIGH">🔴 High</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="budget" className="form-label">
+                  Budget (₹)
+                </label>
+                <input
+                  type="number"
+                  id="budget"
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Existing Files */}
+          {existingFiles.length > 0 && (
+            <div className="form-section">
+              <h3 className="section-title">
+                <span className="section-icon">📁</span>
+                Existing Files
+              </h3>
+              <div className="existing-files-grid">
+                {existingFiles.map((file) => (
+                  <div key={file.id} className="existing-file-card">
+                    <div className="file-info">
+                      <div className="file-icon">📄</div>
+                      <div className="file-details">
+                        <span className="file-name">{file.name || file.filename}</span>
+                        <span className="file-meta">
+                          {file.size && `${(file.size / 1024).toFixed(1)} KB`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="file-actions">
+                      <button
+                        type="button"
+                        className="file-action-btn download"
+                        onClick={() => window.open(file.url, '_blank')}
+                        title="Download"
+                      >
+                        ⬇️
+                      </button>
+                      <button
+                        type="button"
+                        className="file-action-btn delete"
+                        onClick={() => handleDeleteFile(file.id)}
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New Attachments */}
+          <div className="form-section">
+            <h3 className="section-title">
+              <span className="section-icon">📎</span>
+              Add New Files
+            </h3>
+            <UploadAttachments
+              attachments={attachments}
+              setAttachments={setAttachments}
+            />
+          </div>
+
+          {/* Form Actions */}
+          <div className="form-actions">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="btn btn-secondary"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <div className="btn-spinner"></div>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <span className="btn-icon">💾</span>
+                  Update Project
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
