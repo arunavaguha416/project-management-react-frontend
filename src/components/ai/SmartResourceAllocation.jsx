@@ -1,60 +1,41 @@
 // src/components/ai/SmartResourceAllocation.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { aiService } from '../../services/ai/aiService';
+import AIStatusIndicator from './AIStatusIndicator';
 
 const SmartResourceAllocation = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showMessage, setShowMessage] = useState(null);
+  const [isAiPowered, setIsAiPowered] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [aiStatus, setAiStatus] = useState('');
 
-  // Static workload data for demo
-  const workloadData = {
-    teams: [
-      { name: 'Frontend Team', workload: 75, status: 'good' },
-      { name: 'Backend Team', workload: 85, status: 'warning' },
-      { name: 'QA Team', workload: 60, status: 'good' }
-    ],
-    skillMatch: 92,
-    riskLevel: 'medium'
-  };
-
-  const showNotification = (type, message) => {
+  // Show notification message
+  const showNotification = useCallback((type, message) => {
     setShowMessage({ type, message });
     setTimeout(() => setShowMessage(null), 4000);
-  };
-
-  const fetchRecommendations = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await aiService.getRecommendations({
-        page: 1,
-        page_size: 10,
-        is_applied: false
-      });
-      
-      if (response.status) {
-        setRecommendations(response.records || []);
-      } else {
-        setRecommendations([]);
-      }
-    } catch (error) {
-      console.error('Error fetching recommendations:', error);
-      setRecommendations([]);
-    } finally {
-      setLoading(false);
-    }
   }, []);
 
+  // Generate AI recommendations
   const generateRecommendations = useCallback(async () => {
     setLoading(true);
     try {
       const response = await aiService.generateRecommendations();
       
       if (response.status) {
-        showNotification('success', response.message);
-        await fetchRecommendations(); // Refresh the list
+        setRecommendations(response.records || []);
+        setIsAiPowered(response.ai_powered || false);
+        setDemoMode(response.demo_mode || false);
+        setAiStatus(response.ai_status || '');
+        
+        const message = response.ai_powered 
+          ? `🤖 Generated ${response.records?.length || 0} AI-powered recommendations!`
+          : `🎭 Generated ${response.records?.length || 0} demo recommendations for testing`;
+        
+        showNotification('success', message);
       } else {
-        showNotification('error', response.message || 'Failed to generate recommendations');
+        showNotification('error', 'Failed to generate recommendations. Please try again.');
       }
     } catch (error) {
       showNotification('error', 'Failed to generate recommendations. Please try again.');
@@ -62,55 +43,122 @@ const SmartResourceAllocation = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchRecommendations]);
+  }, [showNotification]);
 
-  const applyRecommendation = async (recId) => {
+  // Load recommendations on component mount
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      try {
+        const response = await aiService.getRecommendations({ page: 1, page_size: 10 });
+        if (response.status && response.records) {
+          setRecommendations(response.records);
+        }
+      } catch (error) {
+        console.error('Error loading recommendations:', error);
+      }
+    };
+
+    loadRecommendations();
+  }, []);
+
+  // Apply recommendation
+  const handleApplyRecommendation = async (recommendationId, title) => {
     try {
-      const response = await aiService.applyRecommendation(recId);
+      const response = await aiService.applyRecommendation(recommendationId);
       
       if (response.status) {
-        showNotification('success', response.message);
-        setRecommendations(prev => prev.filter(rec => rec.id !== recId));
+        setRecommendations(prev => 
+          prev.map(rec => 
+            rec.id === recommendationId 
+              ? { ...rec, is_applied: true, applied_at: new Date().toISOString() }
+              : rec
+          )
+        );
+        showNotification('success', `Applied: ${title}`);
       } else {
         showNotification('error', response.message || 'Failed to apply recommendation');
       }
     } catch (error) {
-      showNotification('error', 'Failed to apply recommendation.');
+      showNotification('error', 'Failed to apply recommendation');
       console.error('Error applying recommendation:', error);
     }
   };
 
-  const dismissRecommendation = async (recId) => {
+  // Dismiss recommendation
+  const handleDismissRecommendation = async (recommendationId, title) => {
     try {
-      const response = await aiService.deleteRecommendation(recId);
+      const response = await aiService.deleteRecommendation(recommendationId);
       
       if (response.status) {
-        showNotification('info', 'Recommendation dismissed');
-        setRecommendations(prev => prev.filter(rec => rec.id !== recId));
+        setRecommendations(prev => prev.filter(rec => rec.id !== recommendationId));
+        showNotification('success', `Dismissed: ${title}`);
       } else {
         showNotification('error', response.message || 'Failed to dismiss recommendation');
       }
     } catch (error) {
-      showNotification('error', 'Failed to dismiss recommendation.');
+      showNotification('error', 'Failed to dismiss recommendation');
       console.error('Error dismissing recommendation:', error);
     }
   };
 
-  // Load initial recommendations
-  useEffect(() => {
-    fetchRecommendations();
-  }, [fetchRecommendations]);
+  // Get priority color
+  const getPriorityColor = (impact, severity) => {
+    if (severity === 'critical' || impact === 'high') return '#f44336';
+    if (severity === 'warning' || impact === 'medium') return '#ff9800';
+    return '#4caf50';
+  };
+
+  // Get confidence indicator
+  const getConfidenceIndicator = (confidence) => {
+    if (confidence >= 90) return { text: 'Very High', color: '#4caf50' };
+    if (confidence >= 80) return { text: 'High', color: '#8bc34a' };
+    if (confidence >= 70) return { text: 'Good', color: '#ff9800' };
+    return { text: 'Moderate', color: '#f44336' };
+  };
 
   return (
     <div className="ai-components-container">
+      {/* Header */}
+      <div className="ai-header-content">
+        <div className="ai-header-info">
+          <h2 className="ai-page-title">Smart Resource Allocation</h2>
+          <p className="ai-page-subtitle">
+            AI-powered recommendations for optimal team performance and resource distribution
+          </p>
+        </div>
+        <div className="ai-header-actions">
+          {/* AI Status Indicator */}
+          <AIStatusIndicator 
+            isAiPowered={isAiPowered}
+            demoMode={demoMode}
+            aiStatus={aiStatus}
+            className="ai-header-status"
+          />
+          
+          <button 
+            className="ai-action-btn primary"
+            onClick={generateRecommendations}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="ai-btn-spinner"></span>
+                Generating...
+              </>
+            ) : (
+              <>
+                <span className="ai-btn-icon">🤖</span>
+                Generate Recommendations
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Notification */}
       {showMessage && (
-        <div className={`ai-notification ai-notification-${showMessage.type}`}>
-          <span className="ai-notification-icon">
-            {showMessage.type === 'success' ? '✅' : 
-             showMessage.type === 'error' ? '❌' : 'ℹ️'}
-          </span>
-          <span className="ai-notification-message">{showMessage.message}</span>
+        <div className={`ai-notification ${showMessage.type}`}>
+          <span className="ai-notification-text">{showMessage.message}</span>
           <button 
             className="ai-notification-close"
             onClick={() => setShowMessage(null)}
@@ -120,145 +168,144 @@ const SmartResourceAllocation = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="ai-header-content">
-        <div className="ai-header-info">
-          <h2 className="ai-page-title">AI Resource Allocation</h2>
-          <p className="ai-page-subtitle">Intelligent team matching and workload optimization</p>
-        </div>
-        <div className="ai-header-actions">
-          <button 
-            className="ai-action-btn primary"
-            onClick={generateRecommendations}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <span className="ai-btn-spinner"></span>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <span className="ai-btn-icon">🧠</span>
-                Generate AI Recommendations
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="ai-stats-grid">
-        <div className="ai-stat-card primary">
-          <div className="ai-stat-icon">👥</div>
-          <div className="ai-stat-content">
-            <h3>{workloadData.skillMatch}%</h3>
-            <p>Skill Match Score</p>
-          </div>
-        </div>
-        
-        <div className="ai-stat-card warning">
-          <div className="ai-stat-icon">⚠️</div>
-          <div className="ai-stat-content">
-            <h3>3</h3>
-            <p>Risk Factors</p>
-          </div>
-        </div>
-        
-        <div className="ai-stat-card success">
-          <div className="ai-stat-icon">📈</div>
-          <div className="ai-stat-content">
-            <h3>{recommendations.length}</h3>
-            <p>Active Recommendations</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Dashboard Grid */}
+      {/* Content */}
       <div className="ai-dashboard-grid">
-        {/* Team Workload Card */}
-        <div className="ai-dashboard-card">
-          <div className="ai-card-header">
-            <h3>Team Workload Balance</h3>
-            <div className="ai-badge success">Optimized</div>
-          </div>
-          <div className="ai-card-content">
-            {workloadData.teams.map((team, index) => (
-              <div key={index} className="ai-progress-container">
-                <span>{team.name}</span>
-                <div className="ai-progress-bar">
-                  <div 
-                    className="ai-progress-fill" 
-                    style={{ width: `${team.workload}%` }}
-                  />
-                </div>
-                <span className="ai-progress-text">{team.workload}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recommendations Card */}
-        <div className="ai-dashboard-card full-width">
-          <div className="ai-card-header">
-            <h3>AI Recommendations ({recommendations.length})</h3>
-          </div>
-          <div className="ai-card-content">
-            <div className="ai-items-list">
-              {loading ? (
-                <div className="ai-loading-state">
-                  <div className="ai-loading-spinner"></div>
-                  <p>Loading recommendations...</p>
-                </div>
-              ) : recommendations.length === 0 ? (
-                <div className="ai-empty-state">
-                  <div className="ai-empty-icon">🧠</div>
-                  <p>Click "Generate AI Recommendations" to get intelligent suggestions</p>
-                </div>
-              ) : (
-                recommendations.map((rec) => (
-                  <div key={rec.id} className="ai-item">
-                    <div className="ai-item-info">
-                      <h4 className="ai-item-title">{rec.title}</h4>
-                      <p className="ai-item-description">{rec.description}</p>
-                      <div className="ai-flex ai-gap-8">
-                        <div className={`ai-badge ${
-                          rec.impact === 'high' ? 'error' : 
-                          rec.impact === 'medium' ? 'warning' : 'info'
-                        }`}>
-                          {rec.impact} Impact
-                        </div>
-                        <div className={`ai-badge ${
-                          rec.severity === 'critical' ? 'error' :
-                          rec.severity === 'warning' ? 'warning' : 'info'
-                        }`}>
-                          {rec.severity}
-                        </div>
-                        <span className="ai-progress-text">
-                          AI Confidence: {rec.confidence}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="ai-item-meta">
-                      <button 
-                        className="ai-action-btn secondary"
-                        onClick={() => dismissRecommendation(rec.id)}
-                      >
-                        Dismiss
-                      </button>
-                      <button 
-                        className="ai-action-btn primary"
-                        onClick={() => applyRecommendation(rec.id)}
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+        {loading ? (
+          <div className="ai-dashboard-card full-width">
+            <div className="ai-loading-state">
+              <div className="ai-loading-spinner"></div>
+              <p>Analyzing team data and generating intelligent recommendations...</p>
+              <small>This may take a few moments while our AI processes your project data</small>
             </div>
           </div>
-        </div>
+        ) : recommendations.length === 0 ? (
+          <div className="ai-dashboard-card full-width">
+            <div className="ai-empty-state">
+              <div className="ai-empty-icon">🎯</div>
+              <h3>No Recommendations Yet</h3>
+              <p>Click "Generate Recommendations" to get AI-powered suggestions for optimizing your team's resource allocation</p>
+              <button 
+                className="ai-empty-action-btn"
+                onClick={generateRecommendations}
+              >
+                <span className="ai-btn-icon">🤖</span>
+                Get Started with AI
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Recommendations Grid */}
+            <div className="ai-recommendations-grid">
+              {recommendations.map((recommendation) => {
+                const confidenceInfo = getConfidenceIndicator(recommendation.confidence);
+                const priorityColor = getPriorityColor(recommendation.impact, recommendation.severity);
+
+                return (
+                  <div key={recommendation.id} className="ai-recommendation-card">
+                    {/* Card Header */}
+                    <div className="ai-card-header">
+                      <div className="ai-card-title-section">
+                        <h3 className="ai-card-title">{recommendation.title}</h3>
+                        <div className="ai-card-badges">
+                          <span 
+                            className={`ai-badge ${recommendation.recommendation_type}`}
+                          >
+                            {recommendation.recommendation_type.replace('_', ' ')}
+                          </span>
+                          <span 
+                            className={`ai-badge ${recommendation.impact}`}
+                            style={{ borderColor: priorityColor, color: priorityColor }}
+                          >
+                            {recommendation.impact} impact
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ai-confidence-indicator">
+                        <div className="ai-confidence-circle" style={{ borderColor: confidenceInfo.color }}>
+                          <span>{recommendation.confidence}%</span>
+                        </div>
+                        <small style={{ color: confidenceInfo.color }}>{confidenceInfo.text}</small>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="ai-card-content">
+                      <p className="ai-card-description">
+                        {recommendation.description}
+                      </p>
+
+                      {recommendation.estimated_benefit && (
+                        <div className="ai-benefit-highlight">
+                          <span className="ai-benefit-icon">📈</span>
+                          <span className="ai-benefit-text">
+                            Expected: {recommendation.estimated_benefit}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="ai-card-actions">
+                      {recommendation.is_applied ? (
+                        <div className="ai-applied-status">
+                          <span className="ai-applied-icon">✅</span>
+                          <span>Applied {new Date(recommendation.applied_at).toLocaleDateString()}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <button 
+                            className="ai-action-btn success"
+                            onClick={() => handleApplyRecommendation(recommendation.id, recommendation.title)}
+                          >
+                            <span className="ai-btn-icon">✓</span>
+                            Apply
+                          </button>
+                          <button 
+                            className="ai-action-btn secondary"
+                            onClick={() => handleDismissRecommendation(recommendation.id, recommendation.title)}
+                          >
+                            <span className="ai-btn-icon">✕</span>
+                            Dismiss
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Summary Statistics */}
+            <div className="ai-dashboard-card">
+              <h3 className="ai-card-title">Recommendations Summary</h3>
+              <div className="ai-summary-stats">
+                <div className="ai-stat-item">
+                  <div className="ai-stat-value">{recommendations.length}</div>
+                  <div className="ai-stat-label">Total Recommendations</div>
+                </div>
+                <div className="ai-stat-item">
+                  <div className="ai-stat-value">
+                    {recommendations.filter(r => r.is_applied).length}
+                  </div>
+                  <div className="ai-stat-label">Applied</div>
+                </div>
+                <div className="ai-stat-item">
+                  <div className="ai-stat-value">
+                    {recommendations.filter(r => r.impact === 'high').length}
+                  </div>
+                  <div className="ai-stat-label">High Impact</div>
+                </div>
+                <div className="ai-stat-item">
+                  <div className="ai-stat-value">
+                    {Math.round(recommendations.reduce((acc, r) => acc + r.confidence, 0) / recommendations.length)}%
+                  </div>
+                  <div className="ai-stat-label">Avg Confidence</div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

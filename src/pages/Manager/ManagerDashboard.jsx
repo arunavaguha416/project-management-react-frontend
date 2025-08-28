@@ -134,7 +134,7 @@ const ManagerDashboard = () => {
     setAiLoading(true);
     try {
       const res = await axiosInstance.get(
-        '/api/ai/manager-insights/',
+        '/ai/manager-insights/',
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
       if (res.data.status) {
