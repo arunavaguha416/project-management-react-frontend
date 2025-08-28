@@ -68,7 +68,7 @@ const EmployeeDashboard = () => {
     setAiLoading(true);
     try {
       const res = await axiosInstance.get(
-        '/api/ai/employee-insights/',
+        '/ai/employee-insights/',
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
       if (res.data.status) {
