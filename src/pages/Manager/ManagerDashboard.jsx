@@ -2,10 +2,7 @@ import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from '../../context/auth-context';
 import axiosInstance from '../../services/axiosinstance';
-import SmartResourceAllocation from '../../components/ai/SmartResourceAllocation';
-import ProjectHealthMonitor from '../../components/ai/ProjectHealthMonitor';
 import "../../assets/css/Dashboard.css";
-import '../../assets/css/ai/ai-components.css';
 
 const PAGE_SIZE = 5;
 
@@ -13,7 +10,7 @@ const ManagerDashboard = () => {
   const { user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Existing state
+  // State management
   const [metrics, setMetrics] = useState({
     total_projects: 0,
     active_projects: 0,
@@ -25,21 +22,11 @@ const ManagerDashboard = () => {
   const [managedProjects, setManagedProjects] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
 
-  // AI-related state
-  const [aiInsights, setAiInsights] = useState({
-    resourceOptimization: 0,
-    projectRiskLevel: 'low',
-    teamEfficiency: 85,
-    aiRecommendations: 0
-  });
-  const [showAIPanel, setShowAIPanel] = useState(false);
-
   // Loading states
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [teamLoading, setTeamLoading] = useState(true);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [leaveLoading, setLeaveLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
 
   // Utility functions
   const getInitials = (name) => {
@@ -50,7 +37,7 @@ const ManagerDashboard = () => {
   const getStatusColor = (status) => {
     const colors = {
       'Ongoing': '#4caf50',
-      'Active': '#4caf50',
+      'Active': '#4caf50', 
       'Completed': '#2196f3',
       'On Hold': '#ff9800',
       'Cancelled': '#f44336',
@@ -61,7 +48,7 @@ const ManagerDashboard = () => {
     return colors[status] || '#757575';
   };
 
-  // Existing fetch functions
+  // Fetch dashboard metrics
   const fetchMetrics = useCallback(async () => {
     setMetricsLoading(true);
     try {
@@ -78,6 +65,7 @@ const ManagerDashboard = () => {
     setMetricsLoading(false);
   }, [user]);
 
+  // Fetch team members
   const fetchTeamMembers = useCallback(async () => {
     setTeamLoading(true);
     try {
@@ -95,6 +83,7 @@ const ManagerDashboard = () => {
     setTeamLoading(false);
   }, [user]);
 
+  // Fetch managed projects
   const fetchManagedProjects = useCallback(async () => {
     setProjectsLoading(true);
     try {
@@ -112,6 +101,7 @@ const ManagerDashboard = () => {
     setProjectsLoading(false);
   }, [user]);
 
+  // Fetch leave requests
   const fetchLeaveRequests = useCallback(async () => {
     setLeaveLoading(true);
     try {
@@ -129,31 +119,7 @@ const ManagerDashboard = () => {
     setLeaveLoading(false);
   }, [user]);
 
-  // New AI insights fetch
-  const fetchAIInsights = useCallback(async () => {
-    setAiLoading(true);
-    try {
-      const res = await axiosInstance.get(
-        '/ai/manager-insights/',
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-      if (res.data.status) {
-        setAiInsights(res.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching AI insights:', error);
-      // Set mock data for demo
-      setAiInsights({
-        resourceOptimization: 12,
-        projectRiskLevel: 'medium',
-        teamEfficiency: 85,
-        aiRecommendations: 6
-      });
-    }
-    setAiLoading(false);
-  }, [user]);
-
-  // Handle leave actions
+  // Handle leave approval/rejection
   const handleLeaveAction = async (requestId, action) => {
     try {
       const res = await axiosInstance.post(
@@ -177,8 +143,7 @@ const ManagerDashboard = () => {
     fetchTeamMembers();
     fetchManagedProjects();
     fetchLeaveRequests();
-    fetchAIInsights();
-  }, [authLoading, user, fetchMetrics, fetchTeamMembers, fetchManagedProjects, fetchLeaveRequests, fetchAIInsights]);
+  }, [authLoading, user, fetchMetrics, fetchTeamMembers, fetchManagedProjects, fetchLeaveRequests]);
 
   if (authLoading || !user) {
     return (
@@ -195,17 +160,10 @@ const ManagerDashboard = () => {
       <div className="dashboard-header">
         <div className="header-content">
           <div className="welcome-section">
-            <h1 className="dashboard-title">Welcome back, {user.name}!</h1>
-            <p className="dashboard-subtitle">Here's your team overview with AI insights.</p>
+            <h1 className="dashboard-title">Manager Dashboard</h1>
+            <p className="dashboard-subtitle">Welcome back, {user.name}! Here's your team overview.</p>
           </div>
           <div className="header-actions">
-            <button 
-              className={`action-btn ${showAIPanel ? 'primary' : 'secondary'}`}
-              onClick={() => setShowAIPanel(!showAIPanel)}
-            >
-              <span className="btn-icon">🤖</span>
-              AI Insights
-            </button>
             <button 
               className="action-btn primary"
               onClick={() => navigate('/add-project')}
@@ -217,7 +175,7 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Enhanced Stats Grid with AI */}
+      {/* Stats Cards */}
       <div className="stats-grid">
         <div className="stat-card primary">
           <div className="stat-icon">📊</div>
@@ -227,7 +185,7 @@ const ManagerDashboard = () => {
           </div>
         </div>
         <div className="stat-card success">
-          <div className="stat-icon">✅</div>
+          <div className="stat-icon">🎯</div>
           <div className="stat-content">
             <h3>{metricsLoading ? '...' : metrics.active_projects}</h3>
             <p>Active Projects</p>
@@ -241,55 +199,21 @@ const ManagerDashboard = () => {
           </div>
         </div>
         <div className="stat-card warning">
-          <div className="stat-icon">⏳</div>
+          <div className="stat-icon">📅</div>
           <div className="stat-content">
             <h3>{metricsLoading ? '...' : metrics.pending_leaves}</h3>
             <p>Pending Leaves</p>
           </div>
         </div>
-        {/* AI Stats */}
-        <div className="stat-card ai-stat primary">
-          <div className="stat-icon">🤖</div>
-          <div className="stat-content">
-            <h3>{aiLoading ? '...' : aiInsights.teamEfficiency}%</h3>
-            <p>AI Team Efficiency</p>
-          </div>
-        </div>
-        <div className="stat-card ai-stat warning">
-          <div className="stat-icon">⚡</div>
-          <div className="stat-content">
-            <h3>{aiLoading ? '...' : aiInsights.aiRecommendations}</h3>
-            <p>AI Recommendations</p>
-          </div>
-        </div>
       </div>
 
-      {/* AI Panel */}
-      {showAIPanel && (
-        <div className="ai-components-container ai-mb-32">
-          <div className="ai-dashboard-grid">
-            <div className="ai-dashboard-card full-width">
-              <SmartResourceAllocation />
-            </div>
-            <div className="ai-dashboard-card full-width">
-              <ProjectHealthMonitor projectId="manager-overview" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Dashboard Grid */}
+      {/* Main Content Grid */}
       <div className="dashboard-grid">
         {/* Team Members */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h2>Team Members</h2>
-            <button 
-              className="view-all-btn"
-              onClick={() => navigate('/employee-list')}
-            >
-              View All
-            </button>
+            <h3>Team Members</h3>
+            <span className="team-count">{teamMembers.length} members</span>
           </div>
           <div className="card-content">
             {teamLoading ? (
@@ -298,19 +222,26 @@ const ManagerDashboard = () => {
                 <p>Loading team...</p>
               </div>
             ) : teamMembers.length > 0 ? (
-              <div className="employees-list">
-                {teamMembers.slice(0, 5).map((member, index) => (
-                  <div key={index} className="employee-item">
-                    <div className="employee-avatar">
+              <div className="team-list">
+                {teamMembers.map((member, index) => (
+                  <div key={index} className="team-item">
+                    <div className="member-avatar">
                       {getInitials(member.name)}
                     </div>
-                    <div className="employee-info">
-                      <h4 className="employee-name">{member.name}</h4>
-                      <p className="employee-email">{member.email}</p>
-                      <div className="employee-meta">
-                        <span className="employee-role">{member.role}</span>
-                        <span className="employee-status active">Active</span>
+                    <div className="member-info">
+                      <h4 className="member-name">{member.name || '--'}</h4>
+                      <p className="member-email">{member.email}</p>
+                      <div className="member-meta">
+                        <span className="member-role">
+                          {member.designation || member.role || '--'}
+                        </span>
+                        <span className="member-project">
+                          {member.current_project || 'Unassigned'}
+                        </span>
                       </div>
+                    </div>
+                    <div className="member-status active">
+                      {member.status || 'Active'}
                     </div>
                   </div>
                 ))}
@@ -318,6 +249,7 @@ const ManagerDashboard = () => {
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">👥</div>
+                <h4>No team members found</h4>
                 <p>Your team will appear here once assigned</p>
               </div>
             )}
@@ -327,7 +259,7 @@ const ManagerDashboard = () => {
         {/* Managed Projects */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h2>Managed Projects</h2>
+            <h3>My Projects</h3>
             <button 
               className="view-all-btn"
               onClick={() => navigate('/project-list')}
@@ -343,50 +275,39 @@ const ManagerDashboard = () => {
               </div>
             ) : managedProjects.length > 0 ? (
               <div className="projects-list">
-                {managedProjects.slice(0, 5).map((project, index) => (
-                  <div key={index} className="project-item">
+                {managedProjects.map((project) => (
+                  <div key={project.id} className="project-item">
                     <div className="project-info">
                       <h4 className="project-name">{project.name}</h4>
                       <div className="project-meta">
-                        <div className="manager-info">
-                          <div className="manager-avatar">
-                            {getInitials(project.manager_name)}
-                          </div>
-                          <span>{project.manager_name}</span>
+                        <div className="team-size">
+                          <span className="team-icon">👥</span>
+                          <span>{project.team_size || 0} members</span>
                         </div>
                         <div className="project-progress">
                           <div className="progress-bar">
                             <div 
-                              className="progress-fill" 
+                              className="progress-fill"
                               style={{ width: `${project.progress || 0}%` }}
                             ></div>
                           </div>
                           <span className="progress-text">{project.progress || 0}%</span>
                         </div>
-                        <span className="team-size">
-                          <span className="team-icon">👥</span>
-                          {project.team_size || 0}
-                        </span>
                       </div>
-                      <span 
-                        className="project-status"
-                        style={{ color: getStatusColor(project.status) }}
-                      >
-                        {project.status}
-                      </span>
                     </div>
-                    <button 
-                      className="assign-btn"
-                      onClick={() => navigate(`/project-details/${project.id}`)}
+                    <div 
+                      className="project-status"
+                      style={{ color: getStatusColor(project.status) }}
                     >
-                      View
-                    </button>
+                      {project.status}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="empty-state">
-                <div className="empty-icon">📁</div>
+                <div className="empty-icon">📂</div>
+                <h4>No projects assigned</h4>
                 <p>Projects you manage will appear here</p>
               </div>
             )}
@@ -396,8 +317,8 @@ const ManagerDashboard = () => {
         {/* Leave Requests */}
         <div className="dashboard-card full-width">
           <div className="card-header">
-            <h2>Pending Leave Requests</h2>
-            <span className="pending-count">{leaveRequests.length}</span>
+            <h3>Team Leave Requests</h3>
+            <span className="pending-count">{leaveRequests.length} pending</span>
           </div>
           <div className="card-content">
             {leaveLoading ? (
@@ -407,8 +328,8 @@ const ManagerDashboard = () => {
               </div>
             ) : leaveRequests.length > 0 ? (
               <div className="leaves-table">
-                {leaveRequests.map((request, index) => (
-                  <div key={index} className="leave-item">
+                {leaveRequests.map((request) => (
+                  <div key={request.id} className="leave-item">
                     <div className="leave-employee">
                       <div className="employee-avatar">
                         {getInitials(request.employee_name)}
@@ -420,11 +341,13 @@ const ManagerDashboard = () => {
                     </div>
                     <div className="leave-dates">
                       <div className="date-range">
-                        <span>{request.start_date}</span>
+                        <span className="from-date">{request.start_date}</span>
                         <span className="date-arrow">→</span>
-                        <span>{request.end_date}</span>
+                        <span className="to-date">{request.end_date}</span>
                       </div>
-                      <span className="leave-days">{request.days} days</span>
+                      <span className="leave-days">
+                        {request.total_days} day{request.total_days !== 1 ? 's' : ''}
+                      </span>
                     </div>
                     <div className="leave-reason">
                       <p>{request.reason || 'No reason provided'}</p>
@@ -432,15 +355,15 @@ const ManagerDashboard = () => {
                     <div className="leave-actions">
                       <button 
                         className="approve-btn"
-                        onClick={() => handleLeaveAction(request.id, 'APPROVED')}
+                        onClick={() => handleLeaveAction(request.id, 'APPROVE')}
                       >
-                        Approve
+                        ✓ Approve
                       </button>
                       <button 
                         className="reject-btn"
-                        onClick={() => handleLeaveAction(request.id, 'REJECTED')}
+                        onClick={() => handleLeaveAction(request.id, 'REJECT')}
                       >
-                        Reject
+                        ✗ Reject
                       </button>
                     </div>
                   </div>
@@ -448,9 +371,9 @@ const ManagerDashboard = () => {
               </div>
             ) : (
               <div className="empty-state">
-                <div className="empty-icon">✅</div>
-                <h4>All caught up!</h4>
-                <p>New requests will appear here.</p>
+                <div className="empty-icon">📅</div>
+                <h4>No pending leave requests</h4>
+                <p>All caught up! New requests will appear here.</p>
               </div>
             )}
           </div>

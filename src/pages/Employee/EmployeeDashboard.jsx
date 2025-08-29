@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext, useCallback } from "react";
 import axiosInstance from "../../services/axiosinstance";
 import { AuthContext } from '../../context/auth-context';
 import { useNavigate } from "react-router-dom";
-import AIAssistant from '../../components/ai/AIAssistant';
 import "../../assets/css/Dashboard.css";
 import '../../assets/css/ai/ai-components.css';
 
@@ -25,7 +24,6 @@ const EmployeeDashboard = () => {
     learningPaths: 3,
     workloadBalance: 'good'
   });
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   // Form state
   const [leaveForm, setLeaveForm] = useState({ start_date: "", end_date: "", reason: "" });
@@ -233,13 +231,7 @@ const EmployeeDashboard = () => {
             <p className="dashboard-subtitle">Here's your personalized workspace with AI insights.</p>
           </div>
           <div className="header-actions">
-            <button 
-              className={`action-btn ${showAIAssistant ? 'primary' : 'secondary'}`}
-              onClick={() => setShowAIAssistant(!showAIAssistant)}
-            >
-              <span className="btn-icon">🤖</span>
-              AI Assistant
-            </button>
+            
             <button 
               className="action-btn primary"
               onClick={() => setShowLeaveForm(true)}
@@ -311,16 +303,6 @@ const EmployeeDashboard = () => {
         </div>
       </div>
 
-      {/* AI Assistant Panel */}
-      {showAIAssistant && (
-        <div className="ai-components-container ai-mb-32">
-          <div className="ai-dashboard-grid">
-            <div className="ai-dashboard-card full-width">
-              <AIAssistant />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Dashboard Grid */}
       <div className="dashboard-grid">

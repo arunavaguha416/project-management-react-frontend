@@ -7,7 +7,6 @@ import "../../assets/css/ProjectList.css";
 const ProjectList = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-  
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [paginationLoading, setPaginationLoading] = useState(false);
@@ -20,7 +19,6 @@ const ProjectList = () => {
     totalCount: 0
   });
 
-  // Summary stats
   const [summaryStats, setSummaryStats] = useState({
     total: 0,
     ongoing: 0,
@@ -30,6 +28,32 @@ const ProjectList = () => {
 
   const apiEndpoint = user.role === "HR" ? "/projects/list/" : "/projects/manager/list/";
 
+  const handleProjectClick = (projectId) => {
+    navigate(`/project-details/${projectId}`);
+  };
+
+  const handleCreateProject = () => {
+    navigate('/add-project');
+  };
+
+  const handleEditProject = (projectId, e) => {
+    e.stopPropagation();
+    navigate(`/edit-project/${projectId}`);
+  };
+
+   const handleSprint = (projectId, e) => {
+    e.stopPropagation();
+    navigate(`/sprint-board/${projectId}`);
+  };
+
+  const handleDeleteProject = (projectId, projectName, e) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete "${projectName}"?`)) {
+      // Add delete API call here
+      console.log('Delete project:', projectId);
+    }
+  };
+
   const fetchProjects = useCallback(async (isPagination = false) => {
     try {
       if (isPagination) {
@@ -37,14 +61,14 @@ const ProjectList = () => {
       } else {
         setIsLoading(true);
       }
-      
+
       const res = await axiosInstance.post(apiEndpoint, {
         page_size: pagination.pageSize,
         page: pagination.currentPage,
         search: searchQuery,
         status: statusFilter
       });
-      
+
       if (res.data.status) {
         const projectData = res.data.records || [];
         setProjects(projectData);
@@ -55,7 +79,6 @@ const ProjectList = () => {
           currentPage: res.data.current_page || 1
         }));
 
-        // Calculate summary stats
         setSummaryStats({
           total: res.data.count || 0,
           ongoing: projectData.filter(p => p.status === 'Ongoing').length,
@@ -78,7 +101,7 @@ const ProjectList = () => {
     fetchProjects(false);
   }, [fetchProjects]);
 
-  const handlePageChange = page => {
+  const handlePageChange = (page) => {
     setPagination(prev => ({ ...prev, currentPage: page }));
     setTimeout(() => fetchProjects(true), 0);
   };
@@ -95,219 +118,120 @@ const ProjectList = () => {
   };
 
   const getInitials = (name) => {
-    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Ongoing': return '🚀';
-      case 'Completed': return '✅';
-      case 'Pending': return '⏳';
-      case 'On Hold': return '⏸️';
-      default: return '📋';
-    }
+    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'P';
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      'Ongoing': '#4caf50',
-      'Completed': '#2196f3',
-      'Pending': '#ff9800',
-      'On Hold': '#f44336'
+      'Ongoing': '#10b981',
+      'Completed': '#3b82f6',
+      'Pending': '#f59e0b',
+      'On Hold': '#ef4444'
     };
-    return colors[status] || '#757575';
+    return colors[status] || '#6b7280';
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return '--';
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
-  };
-
-  const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, pageSize, isLoading = false }) => {
-    const getPageNumbers = () => {
-      const pages = [];
-      const maxVisible = 5;
-      
-      if (totalPages <= maxVisible) {
-        for (let i = 1; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        if (currentPage <= 3) {
-          for (let i = 1; i <= 4; i++) {
-            pages.push(i);
-          }
-          pages.push("...");
-          pages.push(totalPages);
-        } else if (currentPage >= totalPages - 2) {
-          pages.push(1);
-          pages.push("...");
-          for (let i = totalPages - 3; i <= totalPages; i++) {
-            pages.push(i);
-          }
-        } else {
-          pages.push(1);
-          pages.push("...");
-          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-            pages.push(i);
-          }
-          pages.push("...");
-          pages.push(totalPages);
-        }
-      }
-      return pages;
-    };
-
-    const startItem = (currentPage - 1) * pageSize + 1;
-    const endItem = Math.min(currentPage * pageSize, totalCount);
-
-    if (totalCount === 0) return null;
-
-    return (
-      <div className={`pagination-container ${isLoading ? 'loading' : ''}`}>
-        <div className="pagination-info">
-          Showing {startItem} to {endItem} of {totalCount} projects
-        </div>
-        
-        <div className="pagination">
-          <button
-            className="page-btn prev"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1 || isLoading}
-          >
-            ← Previous
-          </button>
-
-          <div className="page-numbers">
-            {getPageNumbers().map((page, index) => (
-              <button
-                key={index}
-                className={`page-number ${page === currentPage ? 'active' : ''} ${page === '...' ? 'dots' : ''}`}
-                onClick={() => typeof page === 'number' && onPageChange(page)}
-                disabled={page === '...' || isLoading}
-              >
-                {page}
-              </button>
-            ))}
-          </div>
-
-          <button
-            className="page-btn next"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages || isLoading}
-          >
-            Next →
-          </button>
-        </div>
-      </div>
-    );
   };
 
   if (isLoading) {
     return (
-      <div className="project-list-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading projects...</p>
+      <div className="app-container">
+        <div className="loading-wrapper">
+          <div className="spinner"></div>
+          <p>Loading projects...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="project-list-container">
-      {/* Back Button */}
-      <div className="page-header">
-        <button 
-          className="back-btn"
-          onClick={() => navigate(-1)}
-          title="Go back"
-        >
-          <span className="back-icon">←</span>
-          <span className="back-text">Back</span>
-        </button>
-      </div>
-
+    <div className="app-container">
       {/* Header */}
-      <div className="project-list-header">
+      <header className="app-header">
         <div className="header-content">
-          <div className="header-info">
-            <h1 className="page-title">
-              {user.role === "HR" ? "All Projects" : "My Projects"}
-            </h1>
+          <div className="header-left">
+            <h1 className="page-title">Projects</h1>
             <p className="page-subtitle">
-              {user.role === "HR" 
-                ? "Manage and track all your projects" 
-                : "Projects you're managing"}
+              {user.role === "HR" ? "Manage and track all your projects" : "Your assigned projects"}
             </p>
           </div>
-          
-          <div className="header-actions">
-            {/* Sprint Board Button - Corrected Text */}
-            <button 
-              className="action-btn secondary"
-              onClick={() => navigate('/sprint-board')}
-              title="Go to Sprint Board"
-            >
-              <span className="btn-icon">📊</span>
-              Sprint Board
-            </button>
-            
-            {/* New Project Button - Only for HR */}
-            {user.role === "HR" && (
-              <button 
-                className="action-btn primary"
-                onClick={() => navigate('/add-project')}
-                title="Create New Project"
-              >
-                <span className="btn-icon">➕</span>
-                New Project
-              </button>
-            )}
-          </div>
+          <button className="create-btn" onClick={handleCreateProject}>
+            <svg className="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Project
+          </button>
         </div>
-      </div>
+      </header>
 
       {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card total">
-          <div className="stat-icon">📊</div>
-          <div className="stat-content">
-            <h3>{summaryStats.total}</h3>
-            <p>Total Projects</p>
+      <section className="stats-section">
+        <div className="stats-grid">
+          <div className="stat-card stat-primary">
+            <div className="stat-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{summaryStats.total}</div>
+              <div className="stat-label">Total Projects</div>
+            </div>
           </div>
-        </div>
-        <div className="stat-card ongoing">
-          <div className="stat-icon">🚀</div>
-          <div className="stat-content">
-            <h3>{summaryStats.ongoing}</h3>
-            <p>Ongoing</p>
-          </div>
-        </div>
-        <div className="stat-card completed">
-          <div className="stat-icon">✅</div>
-          <div className="stat-content">
-            <h3>{summaryStats.completed}</h3>
-            <p>Completed</p>
-          </div>
-        </div>
-        <div className="stat-card pending">
-          <div className="stat-icon">⏳</div>
-          <div className="stat-content">
-            <h3>{summaryStats.pending}</h3>
-            <p>Pending</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Filters */}
-      <div className="filters-section">
-        <div className="search-container">
+          <div className="stat-card stat-success">
+            <div className="stat-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{summaryStats.ongoing}</div>
+              <div className="stat-label">Active</div>
+            </div>
+          </div>
+
+          <div className="stat-card stat-info">
+            <div className="stat-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{summaryStats.completed}</div>
+              <div className="stat-label">Completed</div>
+            </div>
+          </div>
+
+          <div className="stat-card stat-warning">
+            <div className="stat-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{summaryStats.pending}</div>
+              <div className="stat-label">Pending</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Controls */}
+      <section className="controls-section">
+        <div className="search-wrapper">
           <form onSubmit={handleSearch} className="search-form">
-            <div className="search-input-wrapper">
-              <span className="search-icon">🔍</span>
+            <div className="search-input-group">
+              <svg className="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input
                 type="text"
                 placeholder="Search projects..."
@@ -316,189 +240,255 @@ const ProjectList = () => {
                 className="search-input"
               />
             </div>
-            <button type="submit" className="search-btn">
-              Search
-            </button>
+            <button type="submit" className="search-btn">Search</button>
           </form>
         </div>
 
-        <div className="status-filters">
-          <button
-            className={`filter-btn ${statusFilter === "" ? "active" : ""}`}
-            onClick={() => handleStatusFilter("")}
-          >
-            All
-          </button>
-          <button
-            className={`filter-btn ${statusFilter === "Ongoing" ? "active" : ""}`}
-            onClick={() => handleStatusFilter("Ongoing")}
-          >
-            🚀 Ongoing
-          </button>
-          <button
-            className={`filter-btn ${statusFilter === "Completed" ? "active" : ""}`}
-            onClick={() => handleStatusFilter("Completed")}
-          >
-            ✅ Completed
-          </button>
-          <button
-            className={`filter-btn ${statusFilter === "Pending" ? "active" : ""}`}
-            onClick={() => handleStatusFilter("Pending")}
-          >
-            ⏳ Pending
-          </button>
+        <div className="filter-tabs">
+          {['', 'Ongoing', 'Completed', 'Pending'].map(status => (
+            <button
+              key={status}
+              className={`filter-tab ${statusFilter === status ? 'active' : ''}`}
+              onClick={() => handleStatusFilter(status)}
+            >
+              {status || 'All'}
+            </button>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Projects Table */}
-      <div className="projects-section">
-        {projects.length > 0 ? (
-          <div className="projects-table-container">
-            <div className="projects-table">
-              <div className="table-header">
-                <div className="header-cell project-col">Project</div>
-                <div className="header-cell status-col">Status</div>
-                <div className="header-cell manager-col">Manager</div>
-                <div className="header-cell dates-col">Timeline</div>
-                <div className="header-cell progress-col">Progress</div>
-                <div className="header-cell actions-col">Actions</div>
-              </div>
-
-              <div className="table-body">
-                {projects.map((project) => (
-                  <div key={project.id} className="table-row">
-                    <div className="table-cell project-col">
-                      <div className="project-info">
-                        <div className="project-icon-wrapper">
-                          <span className="project-icon">
-                            {getStatusIcon(project.status)}
+      {/* Content */}
+      <section className="content-section">
+        {projects.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-illustration">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <h3>No projects found</h3>
+            <p>Get started by creating your first project</p>
+            <button className="empty-action-btn" onClick={handleCreateProject}>
+              Create Project
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table */}
+            <div className="desktop-table">
+              <div className="table-wrapper">
+                <table className="projects-table">
+                  <thead>
+                    <tr>
+                      <th>Project</th>
+                      <th>Status</th>
+                      <th>Manager</th>
+                      <th>Timeline</th>
+                      <th>Progress</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projects.map(project => (
+                      <tr key={project.id} onClick={() => handleProjectClick(project.id)}>
+                        <td>
+                          <div className="project-cell">
+                            <div className="project-avatar">
+                              {getInitials(project.name)}
+                            </div>
+                            <div className="project-info">
+                              <div className="project-name">{project.name}</div>
+                            
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span 
+                            className="status-badge"
+                            style={{ backgroundColor: getStatusColor(project.status) }}
+                          >
+                            {project.status}
                           </span>
-                        </div>
-                        <div className="project-details">
-                          <div className="project-name">
-                            {project.name}
+                        </td>
+                        <td>
+                          <div className="manager-cell">
+                            <div className="manager-avatar">
+                              {getInitials(project.manager?.name)}
+                            </div>
+                            <span className="manager-name">{project.manager?.name || 'Unassigned'}</span>
                           </div>
-                          <div className="project-description">
-                            {project.description || 'No description available'}
+                        </td>
+                        <td>
+                          <div className="timeline-cell">
+                            <div className="timeline-start">{formatDate(project.start_date)}</div>
+                            <div className="timeline-separator">→</div>
+                            <div className="timeline-end">{formatDate(project.end_date)}</div>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="table-cell status-col">
-                      <span 
-                        className="status-badge"
-                        style={{ backgroundColor: getStatusColor(project.status) }}
-                      >
-                        {project.status}
-                      </span>
-                    </div>
-
-                    <div className="table-cell manager-col">
-                      {project.manager ? (
-                        <div className="manager-info">
-                          <div className="manager-avatar">
-                            {getInitials(project.manager.name)}
+                        </td>
+                        <td>
+                          <div className="progress-cell">
+                            <div className="progress-bar">
+                              <div 
+                                className="progress-fill"
+                                style={{ width: `${project.progress || 0}%` }}
+                              />
+                            </div>
+                            <span className="progress-text">{project.progress || 0}%</span>
                           </div>
-                          <div className="manager-details">
-                            <span className="manager-name">{project.manager.name}</span>
-                            <span className="manager-role">Manager</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="no-manager">Unassigned</span>
-                      )}
-                    </div>
-
-                    <div className="table-cell dates-col">
-                      <div className="date-range">
-                        <div className="date-item">
-                          <span className="date-label">Start:</span>
-                          <span className="date-value">{formatDate(project.start_date)}</span>
-                        </div>
-                        <div className="date-item">
-                          <span className="date-label">End:</span>
-                          <span className="date-value">{formatDate(project.end_date)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="table-cell progress-col">
-                      <div className="progress-wrapper">
-                        <div className="progress-bar">
-                          <div 
-                            className="progress-fill"
-                            style={{ width: `${project.completion_percentage || 0}%` }}
-                          />
-                        </div>
-                        <span className="progress-text">
-                          {project.completion_percentage || 0}%
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="table-cell actions-col">
-                      <div className="action-buttons-group">
-                        <button
-                          className="action-btn-small view"
-                          onClick={() => navigate(`/project-details/${project.id}`)}
-                          title="View Details"
-                        >
-                          👁️
-                        </button>
-                        <button
-                          className="action-btn-small sprint"
-                          onClick={() => navigate(`/sprint-board/${project.id}`)}
-                          title="Sprint Board"
-                        >
-                          📋
-                        </button>
-                        {user.role === "HR" && (
-                          <button
-                            className="action-btn-small edit"
-                            onClick={() => navigate(`/edit-project/${project.id}`)}
+                        </td>
+                        <td className="actions-col">
+                          <button 
+                            className="action-btn view"
+                            title="View Project"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProjectClick(project.id);
+                            }}
+                          >
+                            👁
+                          </button>
+                          <button 
+                            className="action-btn edit"
                             title="Edit Project"
+                            onClick={(e) => handleEditProject(project.id, e)}
                           >
                             ✏️
                           </button>
-                        )}
+                          {/* <button 
+                            className="action-btn delete"
+                            title="Delete Project"
+                            onClick={(e) => handleDeleteProject(project.id, project.name, e)}
+                          >
+                            🗑️
+                          </button> */}
+
+                          <button 
+                            className="action-btn delete"
+                            title="Go to Sprint"
+                            onClick={(e) => handleSprint(project.id, e)}
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="mobile-cards">
+              {projects.map(project => (
+                <div key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)}>
+                  <div className="card-header">
+                    <div className="project-avatar">
+                      {getInitials(project.name)}
+                    </div>
+                    <div className="card-title-section">
+                      <h4 className="card-title">{project.name}</h4>
+                      <p className="card-subtitle">{project.description}</p>
+                    </div>
+                    <span 
+                      className="status-badge"
+                      style={{ backgroundColor: getStatusColor(project.status) }}
+                    >
+                      {project.status}
+                    </span>
+                  </div>
+                  <div className="card-content">
+                    <div className="card-field">
+                      <span className="field-label">Manager:</span>
+                      <span className="field-value">{project.manager?.name || 'Unassigned'}</span>
+                    </div>
+                    <div className="card-field">
+                      <span className="field-label">Timeline:</span>
+                      <span className="field-value">{formatDate(project.start_date)} → {formatDate(project.end_date)}</span>
+                    </div>
+                    <div className="card-field">
+                      <span className="field-label">Progress:</span>
+                      <div className="progress-cell">
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill"
+                            style={{ width: `${project.progress || 0}%` }}
+                          />
+                        </div>
+                        <span className="progress-text">{project.progress || 0}%</span>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="card-actions">
+                    <button 
+                      className="card-action-btn view"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProjectClick(project.id);
+                      }}
+                    >
+                      View
+                    </button>
+                    <button 
+                      className="card-action-btn edit"
+                      onClick={(e) => handleEditProject(project.id, e)}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="card-action-btn delete"
+                      onClick={(e) => handleDeleteProject(project.id, project.name, e)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        ) : (
-          <div className="empty-state">
-            <div className="empty-icon">📋</div>
-            <h3>No projects found</h3>
-            <p>
-              {searchQuery || statusFilter 
-                ? "Try adjusting your search or filters" 
-                : "No projects available at the moment"}
-            </p>
-            {user.role === "HR" && !searchQuery && !statusFilter && (
-              <button 
-                className="create-btn"
-                onClick={() => navigate('/add-project')}
-              >
-                Create Your First Project
-              </button>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={pagination.currentPage}
-        totalPages={pagination.totalPages}
-        onPageChange={handlePageChange}
-        totalCount={pagination.totalCount}
-        pageSize={pagination.pageSize}
-        isLoading={paginationLoading}
-      />
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="pagination-wrapper">
+                <div className="pagination-info">
+                  Showing {((pagination.currentPage - 1) * pagination.pageSize) + 1} to{' '}
+                  {Math.min(pagination.currentPage * pagination.pageSize, pagination.totalCount)} of{' '}
+                  {pagination.totalCount} projects
+                </div>
+                <div className="pagination-controls">
+                  <button 
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1 || paginationLoading}
+                  >
+                    Previous
+                  </button>
+                  <div className="pagination-numbers">
+                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <button
+                          key={pageNum}
+                          className={`pagination-number ${pageNum === pagination.currentPage ? 'active' : ''}`}
+                          onClick={() => handlePageChange(pageNum)}
+                          disabled={paginationLoading}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button 
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages || paginationLoading}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 };

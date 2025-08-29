@@ -60,9 +60,7 @@ const Card = ({ t, onDragStart, onOpenModal, projectId }) => {
       
       <div className="card-content">
         <h4 className="card-title">{t.title}</h4>
-        {t.description && (
-          <p className="card-description">{t.description}</p>
-        )}
+        
       </div>
       
       <div className="card-footer">
