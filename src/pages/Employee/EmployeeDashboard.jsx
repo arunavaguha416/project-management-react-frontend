@@ -231,7 +231,13 @@ const EmployeeDashboard = () => {
             <p className="dashboard-subtitle">Here's your personalized workspace with AI insights.</p>
           </div>
           <div className="header-actions">
-            
+            <button 
+              className="action-btn primary"
+              onClick={() => navigate('/leave-management')}
+            >
+              <span className="btn-icon">🏖️</span>
+              Leave Management
+            </button>
             <button 
               className="action-btn primary"
               onClick={() => setShowLeaveForm(true)}
@@ -240,6 +246,7 @@ const EmployeeDashboard = () => {
               Apply Leave
             </button>
           </div>
+
         </div>
       </div>
 

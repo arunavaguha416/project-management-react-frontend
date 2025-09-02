@@ -117,9 +117,7 @@ const ProjectList = () => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
-  const getInitials = (name) => {
-    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'P';
-  };
+
 
   const getStatusColor = (status) => {
     const colors = {
@@ -293,9 +291,7 @@ const ProjectList = () => {
                       <tr key={project.id} onClick={() => handleProjectClick(project.id)}>
                         <td>
                           <div className="project-cell">
-                            <div className="project-avatar">
-                              {getInitials(project.name)}
-                            </div>
+                            
                             <div className="project-info">
                               <div className="project-name">{project.name}</div>
                             
@@ -312,9 +308,7 @@ const ProjectList = () => {
                         </td>
                         <td>
                           <div className="manager-cell">
-                            <div className="manager-avatar">
-                              {getInitials(project.manager?.name)}
-                            </div>
+                            
                             <span className="manager-name">{project.manager?.name || 'Unassigned'}</span>
                           </div>
                         </td>
@@ -382,9 +376,7 @@ const ProjectList = () => {
               {projects.map(project => (
                 <div key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)}>
                   <div className="card-header">
-                    <div className="project-avatar">
-                      {getInitials(project.name)}
-                    </div>
+                    
                     <div className="card-title-section">
                       <h4 className="card-title">{project.name}</h4>
                       <p className="card-subtitle">{project.description}</p>

@@ -22,6 +22,9 @@ import EditProject from './pages/Manager/EditProject';
 import AIDashboard from './pages/ai/AIDashboard';
 import AIAssistantPage from './pages/AI/AIAssistantPage';
 import Unauthorized from './pages/Unauthorized';
+import LeaveManagement from './components/LeaveManagement/LeaveManagement';
+import LeaveRequestPage from './components/LeaveManagement/LeaveRequestPage';
+import LeaveDetailsPage from './components/LeaveManagement/LeaveDetailsPage';
 
 // Dashboard Redirect Component - Must be defined before the main App component
 const DashboardRedirect = () => {
@@ -119,6 +122,39 @@ export default function App() {
                 <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN']}>
                   <Layout>
                     <EmployeeDashboard />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Employee Leave Management */}
+            <Route 
+              path="/leave-management" 
+              element={
+                <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN','HR', 'MANAGER']}>
+                  <Layout>
+                    <LeaveManagement />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/leave-request" 
+              element={
+                <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN','HR', 'MANAGER']}>
+                  <Layout>
+                    <LeaveRequestPage />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+
+            <Route 
+              path="/leave-request/:requestId" 
+              element={
+                <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN','HR', 'MANAGER']}>
+                  <Layout>
+                    <LeaveDetailsPage />
                   </Layout>
                 </ProtectedRoute>
               } 

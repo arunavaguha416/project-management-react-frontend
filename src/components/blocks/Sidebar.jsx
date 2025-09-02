@@ -93,19 +93,22 @@ const Sidebar = () => {
           { path: '/project-list', icon: '📁', label: 'Projects' },
           { path: '/add-project', icon: '➕', label: 'Add Project' },
           { path: '/add-user', icon: '👤', label: 'Add Employee' },
-          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
+          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
+          { path: '/leave-management', icon: '📊', label: 'Leave Management' },
         ],
         MANAGER: [
           { path: '/manager-dashboard', icon: '📊', label: 'Dashboard' },
           { path: '/project-list', icon: '📁', label: 'My Projects' },
           { path: '/add-project', icon: '➕', label: 'Add Project' },
           { path: '/employee-list', icon: '👥', label: 'Team Members' },
-          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
+          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
+          { path: '/leave-management', icon: '📊', label: 'Leave Management' }
         ],
         USER: [
           { path: '/employee-dashboard', icon: '📊', label: 'Dashboard' },
           { path: '/projects', icon: '📁', label: 'My Projects' },
-          { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' }
+          { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' },
+          { path: '/leave-management', icon: '📊', label: 'Leave Management' }
         ]
       };
       return roleSpecificItems[user?.role] || [];
@@ -133,19 +136,22 @@ const Sidebar = () => {
         { path: '/project-list', icon: '📁', label: 'Projects' },
         { path: '/add-project', icon: '➕', label: 'Add Project' },
         { path: '/add-user', icon: '👤', label: 'Add Employee' },
-        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
+        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
+        { path: '/leave-management', icon: '📊', label: 'Leave Management' },
       ],
       MANAGER: [
         { path: '/manager-dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/project-list', icon: '📁', label: 'My Projects' },
         { path: '/add-project', icon: '➕', label: 'Add Project' },
         { path: '/employee-list', icon: '👥', label: 'Team Members' },
-        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' }
+        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
+        { path: '/leave-management', icon: '📊', label: 'Leave Management' },
       ],
       USER: [
         { path: '/employee-dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/projects', icon: '📁', label: 'My Projects' },
-        { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' }
+        { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' },
+        { path: '/leave-management', icon: '📊', label: 'Leave Management' },
       ]
     };
     return roleSpecificItems[user?.role] || [];

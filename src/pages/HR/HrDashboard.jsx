@@ -367,7 +367,7 @@ const HrDashboard = () => {
       {/* AI Assistant */}
       {showAIChat && (
         <div className="ai-assistant-container">
-          <AIAssistant onClose={() => setShowAIChat(true)} user={user} />
+          <AIAssistant onClose={() => setShowAIChat(false)} user={user} />
         </div>
       )}
 

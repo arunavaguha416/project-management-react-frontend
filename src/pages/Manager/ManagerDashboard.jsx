@@ -2,7 +2,9 @@ import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from '../../context/auth-context';
 import axiosInstance from '../../services/axiosinstance';
+import AIAssistant from '../../components/ai/AIAssistant';
 import "../../assets/css/Dashboard.css";
+import '../../assets/css/ai/ai-chatbox.css';
 
 const PAGE_SIZE = 5;
 
@@ -27,6 +29,8 @@ const ManagerDashboard = () => {
   const [teamLoading, setTeamLoading] = useState(true);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [leaveLoading, setLeaveLoading] = useState(true);
+
+  const [showAIChat, setShowAIChat] = useState(true);
 
   // Utility functions
   const getInitials = (name) => {
@@ -166,11 +170,25 @@ const ManagerDashboard = () => {
           <div className="header-actions">
             <button 
               className="action-btn primary"
+              onClick={() => navigate('/leave-management')}
+            >
+              <span className="btn-icon">🏖️</span>
+              Leave Management
+            </button>
+            <button 
+              className="action-btn primary"
               onClick={() => navigate('/add-project')}
             >
               <span className="btn-icon">➕</span>
               Add Project
             </button>
+             <button
+                className={`action-btn ${showAIChat ? 'secondary' : 'primary'}`}
+                onClick={() => setShowAIChat(prev => !prev)}
+              >
+                <span role="img" aria-label="ai">🤖</span>
+                {showAIChat ? 'Hide AI Assistant' : 'Show AI Assistant'}
+              </button>
           </div>
         </div>
       </div>
@@ -379,6 +397,13 @@ const ManagerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Assistant */}
+      {showAIChat && (
+        <div className="ai-assistant-container">
+          <AIAssistant onClose={() => setShowAIChat(false)} user={user} />
+        </div>
+      )}
     </div>
   );
 };

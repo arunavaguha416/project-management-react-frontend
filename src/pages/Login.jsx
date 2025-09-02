@@ -23,7 +23,7 @@ const Login = () => {
     try {
       const success = await login(username, password);
       if (success?.user?.role === 'HR') navigate('/dashboard');
-      if (success?.user?.role === 'USER') navigate('/employee-dashboard');
+      if (success?.user?.role === 'EMPLOYEE') navigate('/employee-dashboard');
       if (success?.user?.role === 'MANAGER') navigate('/manager-dashboard');
     } catch (error) {
       setErr(error.message || "Could not log in");
