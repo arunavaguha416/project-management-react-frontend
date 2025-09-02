@@ -10,6 +10,7 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeItem, setActiveItem] = useState('');
+  const [expandedItems, setExpandedItems] = useState(new Set(['Projects'])); // Projects expanded by default
   const sidebarRef = useRef(null);
 
   const handleLogout = () => {
@@ -17,7 +18,6 @@ const Sidebar = () => {
     navigate('/login');
   };
 
-  // Toggle collapse state
   const toggleCollapse = useCallback((e) => {
     if (e && e.stopPropagation) {
       e.stopPropagation();
@@ -25,44 +25,180 @@ const Sidebar = () => {
     setIsCollapsed(prev => !prev);
   }, []);
 
-  // Handle sidebar area clicks for collapse/expand
   const handleSidebarClick = useCallback((e) => {
     if (window.innerWidth >= 1024) {
       const target = e.target;
       const isInteractive = target.closest('.nav-link') || 
-                           target.closest('.logout-btn') || 
-                           target.closest('.collapse-btn') || 
-                           target.closest('button') || 
-                           target.closest('a');
-
+                          target.closest('.logout-btn') || 
+                          target.closest('.collapse-btn') || 
+                          target.closest('.sub-nav') ||
+                          target.closest('button') || 
+                          target.closest('a');
       if (!isInteractive) {
         toggleCollapse(e);
       }
     }
   }, [toggleCollapse]);
 
-  // Enhanced navigation handler with active state
   const handleNavigation = useCallback((path, label, e) => {
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
-    console.log('=== SIDEBAR NAVIGATION ===');
-    console.log('Attempting to navigate to:', path);
-    console.log('Current location:', location.pathname);
-    console.log('User role:', user?.role);
-    
     setActiveItem(label);
     setIsOpen(false);
-    
     try {
       navigate(path);
-      console.log('Navigate called successfully');
     } catch (error) {
       console.error('Navigation error:', error);
     }
-  }, [navigate, location.pathname, user?.role]);
+  }, [navigate]);
 
-  // Handle click outside (only for mobile)
+  const toggleSubmenu = useCallback((label, e) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(label)) {
+        newSet.delete(label);
+      } else {
+        newSet.add(label);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // ✅ FIXED: Moved getNavigationItems inside useCallback to make it stable
+  const getNavigationItems = useCallback(() => {
+    const roleSpecificItems = {
+      HR: [
+        { 
+          path: '/hr-dashboard', 
+          icon: '🏠', 
+          label: 'Dashboard',
+          gradient: 'from-blue-500 to-blue-600' 
+        },
+        { 
+          path: '/employee-list', 
+          icon: '👥', 
+          label: 'Employees',
+          gradient: 'from-green-500 to-emerald-600' 
+        },
+        { 
+          path: '/project-list', 
+          icon: '📊', 
+          label: 'Projects',
+          gradient: 'from-purple-500 to-purple-600',
+          hasSubmenu: true,
+          subItems: [
+            { path: '/project-list', icon: '📋', label: 'View Projects' },
+            { path: '/add-project', icon: '➕', label: 'Add Project' },
+          ]
+        },
+        { 
+          path: '/add-user', 
+          icon: '👤', 
+          label: 'Add Employee',
+          gradient: 'from-indigo-500 to-indigo-600' 
+        },
+        { 
+          path: '/ai-dashboard', 
+          icon: '🤖', 
+          label: 'AI Intelligence',
+          gradient: 'from-cyan-500 to-cyan-600' 
+        },
+        { 
+          path: '/leave-management', 
+          icon: '📝', 
+          label: 'Leave Management',
+          gradient: 'from-orange-500 to-amber-600' 
+        },
+        { 
+          path: '/time-tracking', 
+          icon: '⏰', 
+          label: 'Time Tracking',
+          gradient: 'from-pink-500 to-rose-600' 
+        },
+      ],
+      MANAGER: [
+        { 
+          path: '/manager-dashboard', 
+          icon: '🏠', 
+          label: 'Dashboard',
+          gradient: 'from-blue-500 to-blue-600' 
+        },
+        { 
+          path: '/project-list', 
+          icon: '📊', 
+          label: 'My Projects',
+          gradient: 'from-purple-500 to-purple-600',
+          hasSubmenu: true,
+          subItems: [
+            { path: '/project-list', icon: '📋', label: 'View Projects' },
+            { path: '/add-project', icon: '➕', label: 'Add Project' },
+          ]
+        },
+        { 
+          path: '/employee-list', 
+          icon: '👥', 
+          label: 'Team Members',
+          gradient: 'from-green-500 to-emerald-600' 
+        },
+        { 
+          path: '/ai-dashboard', 
+          icon: '🤖', 
+          label: 'AI Intelligence',
+          gradient: 'from-cyan-500 to-cyan-600' 
+        },
+        { 
+          path: '/leave-management', 
+          icon: '📝', 
+          label: 'Leave Management',
+          gradient: 'from-orange-500 to-amber-600' 
+        },
+        { 
+          path: '/time-tracking', 
+          icon: '⏰', 
+          label: 'Time Tracking',
+          gradient: 'from-pink-500 to-rose-600' 
+        },
+      ],
+      USER: [
+        { 
+          path: '/employee-dashboard', 
+          icon: '🏠', 
+          label: 'Dashboard',
+          gradient: 'from-blue-500 to-blue-600' 
+        },
+        { 
+          path: '/projects', 
+          icon: '📊', 
+          label: 'My Projects',
+          gradient: 'from-purple-500 to-purple-600' 
+        },
+        { 
+          path: '/ai-assistant', 
+          icon: '🤖', 
+          label: 'AI Assistant',
+          gradient: 'from-cyan-500 to-cyan-600' 
+        },
+        { 
+          path: '/leave-management', 
+          icon: '📝', 
+          label: 'Leave Management',
+          gradient: 'from-orange-500 to-amber-600' 
+        },
+        { 
+          path: '/time-tracking', 
+          icon: '⏰', 
+          label: 'Time Tracking',
+          gradient: 'from-pink-500 to-rose-600' 
+        },
+      ]
+    };
+    return roleSpecificItems[user?.role] || [];
+  }, [user?.role]); // ✅ Only depends on user.role which is stable
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
@@ -81,95 +217,46 @@ const Sidebar = () => {
     };
   }, [isOpen]);
 
-  // Auto-close mobile overlay on route change and update active item
+  // ✅ FIXED: Now getNavigationItems is properly included in dependencies
   useEffect(() => {
     setIsOpen(false);
-    
-    const getNavigationItems = () => {
-      const roleSpecificItems = {
-        HR: [
-          { path: '/hr-dashboard', icon: '📊', label: 'Dashboard' },
-          { path: '/employee-list', icon: '👥', label: 'Employees' },
-          { path: '/project-list', icon: '📁', label: 'Projects' },
-          { path: '/add-project', icon: '➕', label: 'Add Project' },
-          { path: '/add-user', icon: '👤', label: 'Add Employee' },
-          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
-          { path: '/leave-management', icon: '📊', label: 'Leave Management' },
-        ],
-        MANAGER: [
-          { path: '/manager-dashboard', icon: '📊', label: 'Dashboard' },
-          { path: '/project-list', icon: '📁', label: 'My Projects' },
-          { path: '/add-project', icon: '➕', label: 'Add Project' },
-          { path: '/employee-list', icon: '👥', label: 'Team Members' },
-          { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
-          { path: '/leave-management', icon: '📊', label: 'Leave Management' }
-        ],
-        USER: [
-          { path: '/employee-dashboard', icon: '📊', label: 'Dashboard' },
-          { path: '/projects', icon: '📁', label: 'My Projects' },
-          { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' },
-          { path: '/leave-management', icon: '📊', label: 'Leave Management' }
-        ]
-      };
-      return roleSpecificItems[user?.role] || [];
-    };
-
-    // Set active item based on current path
     const currentPath = location.pathname;
     const navItems = getNavigationItems();
-    const currentItem = navItems.find(item => 
-      currentPath === item.path || 
-      (item.path !== '/' && currentPath.startsWith(item.path))
-    );
+    
+    // Find active item including sub-items
+    let currentItem = null;
+    navItems.forEach(item => {
+      if (currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path))) {
+        currentItem = item;
+      }
+      if (item.subItems) {
+        item.subItems.forEach(subItem => {
+          if (currentPath === subItem.path || (subItem.path !== '/' && currentPath.startsWith(subItem.path))) {
+            currentItem = subItem;
+            setExpandedItems(prev => new Set([...prev, item.label])); // Expand parent
+          }
+        });
+      }
+    });
     
     if (currentItem) {
       setActiveItem(currentItem.label);
     }
-  }, [location.pathname, user?.role]);
+  }, [location.pathname, getNavigationItems]); // ✅ Now includes getNavigationItems
 
-  // Get navigation items for rendering
-  const getNavigationItems = () => {
-    const roleSpecificItems = {
-      HR: [
-        { path: '/hr-dashboard', icon: '📊', label: 'Dashboard' },
-        { path: '/employee-list', icon: '👥', label: 'Employees' },
-        { path: '/project-list', icon: '📁', label: 'Projects' },
-        { path: '/add-project', icon: '➕', label: 'Add Project' },
-        { path: '/add-user', icon: '👤', label: 'Add Employee' },
-        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
-        { path: '/leave-management', icon: '📊', label: 'Leave Management' },
-      ],
-      MANAGER: [
-        { path: '/manager-dashboard', icon: '📊', label: 'Dashboard' },
-        { path: '/project-list', icon: '📁', label: 'My Projects' },
-        { path: '/add-project', icon: '➕', label: 'Add Project' },
-        { path: '/employee-list', icon: '👥', label: 'Team Members' },
-        { path: '/ai-dashboard', icon: '🤖', label: 'AI Intelligence' },
-        { path: '/leave-management', icon: '📊', label: 'Leave Management' },
-      ],
-      USER: [
-        { path: '/employee-dashboard', icon: '📊', label: 'Dashboard' },
-        { path: '/projects', icon: '📁', label: 'My Projects' },
-        { path: '/ai-assistant', icon: '🤖', label: 'AI Assistant' },
-        { path: '/leave-management', icon: '📊', label: 'Leave Management' },
-      ]
-    };
-    return roleSpecificItems[user?.role] || [];
-  };
-
-  const getUserInitials = (user) => {
+  const getUserInitials = useCallback((user) => {
     if (!user?.name) return user?.email?.charAt(0)?.toUpperCase() || 'U';
     return user.name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2);
-  };
+  }, []);
 
-  const getRoleBadgeColor = (role) => {
+  const getRoleBadgeColor = useCallback((role) => {
     const colors = {
-      HR: 'linear-gradient(135deg, #e91e63 0%, #ad1457 100%)',
-      MANAGER: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
-      USER: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)'
+      HR: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+      MANAGER: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+      USER: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
     };
     return colors[role] || colors.USER;
-  };
+  }, []);
 
   if (!user) return null;
 
@@ -179,9 +266,8 @@ const Sidebar = () => {
     <>
       {/* Mobile Toggle Button */}
       <button 
-        className="sidebar-toggle"
+        className="sidebar-toggle lg:hidden" 
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="Toggle sidebar"
       >
         <div className={`hamburger ${isOpen ? 'active' : ''}`}>
           <span></span>
@@ -191,10 +277,10 @@ const Sidebar = () => {
       </button>
 
       {/* Mobile Overlay */}
-      {isOpen && <div className="sidebar-overlay"></div>}
+      {isOpen && <div className="sidebar-overlay lg:hidden" onClick={() => setIsOpen(false)}></div>}
 
       {/* Sidebar */}
-      <div 
+      <aside
         ref={sidebarRef}
         className={`sidebar ${isOpen ? 'sidebar-open' : ''} ${isCollapsed ? 'sidebar-collapsed' : ''}`}
         onClick={handleSidebarClick}
@@ -203,7 +289,7 @@ const Sidebar = () => {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">
-              PM
+              <span>✨</span>
             </div>
             <div className="brand-text">
               <h3>Project Hub</h3>
@@ -221,23 +307,23 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* User Section */}
+        {/* User Profile */}
         <div className="sidebar-user">
           <div className="user-avatar">
-            {getUserInitials(user)}
+            <span>{getUserInitials(user)}</span>
           </div>
           <div className="user-info">
-            <div className="user-name">{user.name || user.email}</div>
+            <div className="user-name">{user?.name || user?.email}</div>
             <div className="user-role">
-              <div 
-                className="role-badge"
-                style={{ background: getRoleBadgeColor(user.role) }}
+              <span 
+                className="role-badge" 
+                style={{ background: getRoleBadgeColor(user?.role) }}
               >
-                {user.role}
-              </div>
+                {user?.role || 'USER'}
+              </span>
             </div>
             <div className="user-status">
-              <div className="status-dot"></div>
+              <span className="status-dot"></span>
               <span className="status-text">Online</span>
             </div>
           </div>
@@ -248,62 +334,109 @@ const Sidebar = () => {
           <ul className="nav-list main-nav">
             {navigationItems.map((item, index) => (
               <li key={index} className="nav-item">
-                <button
-                  className={`nav-link ${activeItem === item.label ? 'active' : ''}`}
-                  onClick={(e) => handleNavigation(item.path, item.label, e)}
-                  title={isCollapsed ? item.label : undefined}
-                >
-                  <span className="nav-icon">{item.icon}</span>
-                  <span className="nav-label">{item.label}</span>
-                  {item.label === 'AI Intelligence' && (
-                    <span className="notification-badge">NEW</span>
-                  )}
-                </button>
+                {item.hasSubmenu ? (
+                  <>
+                    <button
+                      className={`nav-link ${expandedItems.has(item.label) ? 'expanded' : ''}`}
+                      onClick={(e) => toggleSubmenu(item.label, e)}
+                      title={item.label}
+                    >
+                      <span className="nav-icon-wrapper">
+                        <span className="nav-icon">{item.icon}</span>
+                      </span>
+                      <span className="nav-label">{item.label}</span>
+                      <span className="nav-arrow">
+                        <svg 
+                          className={`arrow-icon ${expandedItems.has(item.label) ? 'rotated' : ''}`}
+                          width="16" 
+                          height="16" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor"
+                        >
+                          <polyline points="9,18 15,12 9,6"></polyline>
+                        </svg>
+                      </span>
+                    </button>
+                    
+                    {/* Submenu */}
+                    <div className={`sub-nav ${expandedItems.has(item.label) ? 'expanded' : 'collapsed'}`}>
+                      <ul className="sub-nav-list">
+                        {item.subItems?.map((subItem, subIndex) => (
+                          <li key={subIndex} className="sub-nav-item">
+                            <button
+                              className={`sub-nav-link ${activeItem === subItem.label ? 'active' : ''}`}
+                              onClick={(e) => handleNavigation(subItem.path, subItem.label, e)}
+                              title={subItem.label}
+                            >
+                              <span className="sub-nav-icon">{subItem.icon}</span>
+                              <span className="sub-nav-label">{subItem.label}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    className={`nav-link ${activeItem === item.label ? 'active' : ''}`}
+                    onClick={(e) => handleNavigation(item.path, item.label, e)}
+                    title={item.label}
+                  >
+                    <span className="nav-icon-wrapper">
+                      <span className="nav-icon">{item.icon}</span>
+                    </span>
+                    <span className="nav-label">{item.label}</span>
+                    {item.label === 'Leave Management' && (
+                      <span className="nav-badge">3</span>
+                    )}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
 
-          <div className="nav-divider"></div>
-
           {/* Quick Actions */}
-          <ul className="nav-list quick-actions">
-            <li className="nav-item">
-              <button 
-                className="nav-link quick-action"
-                onClick={(e) => handleNavigation('/sprint-board', 'Sprint Board', e)}
-                title={isCollapsed ? 'Sprint Board' : undefined}
-              >
-                <span className="nav-icon">📋</span>
-                <span className="nav-label">Sprint Board</span>
-              </button>
-            </li>
-          </ul>
+          <div className="quick-actions">
+            <div className="nav-divider"></div>
+            <ul className="nav-list">
+              <li className="nav-item">
+                <button className="nav-link quick-action" title="Notifications">
+                  <span className="nav-icon-wrapper">
+                    <span className="nav-icon">🔔</span>
+                  </span>
+                  <span className="nav-label">Notifications</span>
+                  <span className="notification-badge">5</span>
+                </button>
+              </li>
+              <li className="nav-item">
+                <button className="nav-link quick-action" title="Settings">
+                  <span className="nav-icon-wrapper">
+                    <span className="nav-icon">⚙️</span>
+                  </span>
+                  <span className="nav-label">Settings</span>
+                </button>
+              </li>
+            </ul>
+          </div>
         </nav>
 
         {/* Footer */}
         <div className="sidebar-footer">
           <button 
-            className="logout-btn"
+            className="logout-btn" 
             onClick={handleLogout}
-            title={isCollapsed ? 'Logout' : undefined}
+            title="Sign out"
           >
             <span className="logout-icon">🚪</span>
-            <span className="logout-text">Logout</span>
+            <span className="logout-text">Sign Out</span>
           </button>
         </div>
 
-        {/* Hints for collapse functionality */}
-        {!isCollapsed && (
-          <div className="sidebar-hint">
-            Click anywhere to collapse
-          </div>
-        )}
-        {isCollapsed && (
-          <div className="sidebar-hint-collapsed">
-            👆
-          </div>
-        )}
-      </div>
+        {/* Hints */}
+        <div className="sidebar-hint desktop-only">Click anywhere to toggle</div>
+        {isCollapsed && <div className="sidebar-hint-collapsed desktop-only">👆</div>}
+      </aside>
     </>
   );
 };
