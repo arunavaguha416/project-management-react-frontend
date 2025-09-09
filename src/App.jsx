@@ -26,6 +26,7 @@ import LeaveManagement from './components/LeaveManagement/LeaveManagement';
 import LeaveRequestPage from './components/LeaveManagement/LeaveRequestPage';
 import LeaveDetailsPage from './components/LeaveManagement/LeaveDetailsPage';
 import TimeTracking from './pages/Common/TimeTracking';
+import GenerateInvoice from './components/projects/GenerateInvoice';
 
 // Dashboard Redirect Component - Must be defined before the main App component
 const DashboardRedirect = () => {
@@ -123,6 +124,18 @@ export default function App() {
                 <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN']}>
                   <Layout>
                     <EmployeeDashboard />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Generate Invoice */}
+            <Route 
+              path="/generate-invoice/:id" 
+              element={
+                <ProtectedRoute allowedRoles={['HR','MANAGER','EMPLOYEE', 'ADMIN']}>
+                  <Layout>
+                    <GenerateInvoice />
                   </Layout>
                 </ProtectedRoute>
               } 

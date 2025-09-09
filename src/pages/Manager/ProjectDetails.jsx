@@ -230,9 +230,7 @@ const ProjectDetails = () => {
         <div className="header-content">
           <div className="project-info">
             <h1 className="project-title">{projectData?.name || "Project Details"}</h1>
-            <p className="project-description">
-              {projectData?.description || "No description available"}
-            </p>
+            
             <div className="project-meta">
               <div className="meta-item">
                 <span className="meta-label">Status:</span>
@@ -489,9 +487,7 @@ const ProjectDetails = () => {
                       </div>
                     </div>
                     
-                    <p className="task-description">
-                      {task.description || "No description provided"}
-                    </p>
+                    
                     
                     <div className="task-meta">
                       {task.assignee_name && (
@@ -536,9 +532,7 @@ const ProjectDetails = () => {
                     </div>
                     <div className="milestone-content">
                       <h4 className="milestone-title">{milestone.title || milestone.name}</h4>
-                      <p className="milestone-description">
-                        {milestone.description || "No description provided"}
-                      </p>
+                     
                       <div className="milestone-meta">
                         <span className="milestone-date">
                           {formatDate(milestone.due_date)}

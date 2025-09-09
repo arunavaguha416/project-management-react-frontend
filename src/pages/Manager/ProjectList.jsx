@@ -41,6 +41,16 @@ const ProjectList = () => {
     navigate(`/edit-project/${projectId}`);
   };
 
+  const handleGenerateInvoice = (project, e) => {
+    e.stopPropagation();
+    if (project.status !== 'Completed') {
+      alert('Invoice can only be generated for completed projects');
+      return;
+    }
+    navigate(`/generate-invoice/${project.id}`);
+  };
+
+
    const handleSprint = (projectId, e) => {
     e.stopPropagation();
     navigate(`/sprint-board/${projectId}`);
@@ -355,6 +365,16 @@ const ProjectList = () => {
                           >
                             🗑️
                           </button> */}
+                          {/* Add Invoice Generation Button - Only for Completed Projects */}
+                          {project.status === 'Completed' && (
+                            <button 
+                              className="action-btn invoice" 
+                              onClick={(e) => handleGenerateInvoice(project, e)}
+                              title="Generate Invoice"
+                            >
+                              💰
+                            </button>
+                          )}
 
                           <button 
                             className="action-btn delete"
