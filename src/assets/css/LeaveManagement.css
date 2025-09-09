@@ -421,7 +421,6 @@
   
   /* Text truncation for long content */
   display: -webkit-box;
-  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -537,7 +536,7 @@
   font-style: italic;
   color: #374151;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -902,7 +901,7 @@
   }
   
   .leave-management .request-reason p {
-    -webkit-line-clamp: 2;
+   
     max-height: 3em;
   }
 }
@@ -945,7 +944,7 @@
   }
   
   .leave-management .request-reason p {
-    -webkit-line-clamp: none;
+    
     max-height: none;
     white-space: normal;
   }
